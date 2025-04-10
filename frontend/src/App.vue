@@ -1,4 +1,3 @@
 <template>
-    Mostrando componentes
-    <router-view/>
+    <router-view />
 </template>
