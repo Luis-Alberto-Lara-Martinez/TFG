@@ -19,9 +19,6 @@ class Videojuegos
     #[ORM\Column(length: 255)]
     private ?string $nombre = null;
 
-    #[ORM\Column(length: 255)]
-    private ?string $descripcion = null;
-
     #[ORM\Column]
     private ?float $precio = null;
 
@@ -75,7 +72,6 @@ class Videojuegos
     {
         $this->imagenes = new ArrayCollection();
         $this->categoria = new ArrayCollection();
-        $this->plataforma = new ArrayCollection();
         $this->detallesCompras = new ArrayCollection();
         $this->reviews = new ArrayCollection();
     }
@@ -93,18 +89,6 @@ class Videojuegos
     public function setNombre(string $nombre): static
     {
         $this->nombre = $nombre;
-
-        return $this;
-    }
-
-    public function getDescripcion(): ?string
-    {
-        return $this->descripcion;
-    }
-
-    public function setDescripcion(string $descripcion): static
-    {
-        $this->descripcion = $descripcion;
 
         return $this;
     }

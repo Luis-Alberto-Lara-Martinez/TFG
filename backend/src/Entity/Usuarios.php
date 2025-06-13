@@ -6,9 +6,10 @@ use App\Repository\UsuariosRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Security\Core\User\UserInterface;
 
 #[ORM\Entity(repositoryClass: UsuariosRepository::class)]
-class Usuarios
+class Usuarios implements UserInterface
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -60,8 +61,6 @@ class Usuarios
 
     public function __construct()
     {
-        $this->created_by = new ArrayCollection();
-        $this->modified_by = new ArrayCollection();
         $this->reviews = new ArrayCollection();
     }
 
@@ -178,28 +177,6 @@ class Usuarios
         return $this;
     }
 
-    public function addCreatedBy(self $createdBy): static
-    {
-        if (!$this->created_by->contains($createdBy)) {
-            $this->created_by->add($createdBy);
-            $createdBy->setCreatedBy($this);
-        }
-
-        return $this;
-    }
-
-    public function removeCreatedBy(self $createdBy): static
-    {
-        if ($this->created_by->removeElement($createdBy)) {
-            // set the owning side to null (unless already changed)
-            if ($createdBy->getCreatedBy() === $this) {
-                $createdBy->setCreatedBy(null);
-            }
-        }
-
-        return $this;
-    }
-
     public function getModifiedAt(): ?\DateTime
     {
         return $this->modified_at;
@@ -220,28 +197,6 @@ class Usuarios
     public function setModifiedBy(?self $modified_by): static
     {
         $this->modified_by = $modified_by;
-
-        return $this;
-    }
-
-    public function addModifiedBy(self $modifiedBy): static
-    {
-        if (!$this->modified_by->contains($modifiedBy)) {
-            $this->modified_by->add($modifiedBy);
-            $modifiedBy->setModifiedBy($this);
-        }
-
-        return $this;
-    }
-
-    public function removeModifiedBy(self $modifiedBy): static
-    {
-        if ($this->modified_by->removeElement($modifiedBy)) {
-            // set the owning side to null (unless already changed)
-            if ($modifiedBy->getModifiedBy() === $this) {
-                $modifiedBy->setModifiedBy(null);
-            }
-        }
 
         return $this;
     }
@@ -286,5 +241,36 @@ class Usuarios
         }
 
         return $this;
+    }
+
+    /**
+     * Returns the roles granted to the user.
+     *
+     * @return array
+     */
+    public function getRoles(): array
+    {
+        // Assuming $this->rol is an entity with a getNombre() method
+        // Adjust as needed for your Roles entity
+        return [$this->rol ? $this->rol->getNombre() : ""];
+    }
+
+    /**
+     * Returns the identifier for this user (e.g. email).
+     *
+     * @return string
+     */
+    public function getUserIdentifier(): string
+    {
+        return $this->nombre;
+    }
+
+    /**
+     * Removes sensitive data from the user.
+     */
+    public function eraseCredentials(): void
+    {
+        // If you store any temporary, sensitive data on the user, clear it here
+        // $this->plainPassword = null;
     }
 }
