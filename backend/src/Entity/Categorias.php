@@ -58,7 +58,7 @@ class Categorias
     {
         if (!$this->videojuegos->contains($videojuego)) {
             $this->videojuegos->add($videojuego);
-            $videojuego->addCategorium($this);
+            $videojuego->addCategoria($this);
         }
 
         return $this;
@@ -67,7 +67,7 @@ class Categorias
     public function removeVideojuego(Videojuegos $videojuego): static
     {
         if ($this->videojuegos->removeElement($videojuego)) {
-            $videojuego->removeCategorium($this);
+            $videojuego->removeCategoria($this);
         }
 
         return $this;

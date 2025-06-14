@@ -68,6 +68,9 @@ class Videojuegos
     #[ORM\OneToMany(targetEntity: Reviews::class, mappedBy: 'videojuego')]
     private Collection $reviews;
 
+    #[ORM\Column]
+    private ?int $stock = null;
+
     public function __construct()
     {
         $this->imagenes = new ArrayCollection();
@@ -215,7 +218,7 @@ class Videojuegos
         return $this->categoria;
     }
 
-    public function addCategorium(Categorias $categorium): static
+    public function addCategoria(Categorias $categorium): static
     {
         if (!$this->categoria->contains($categorium)) {
             $this->categoria->add($categorium);
@@ -224,7 +227,7 @@ class Videojuegos
         return $this;
     }
 
-    public function removeCategorium(Categorias $categorium): static
+    public function removeCategoria(Categorias $categorium): static
     {
         $this->categoria->removeElement($categorium);
 
@@ -299,6 +302,18 @@ class Videojuegos
                 $review->setVideojuego(null);
             }
         }
+
+        return $this;
+    }
+
+    public function getStock(): ?int
+    {
+        return $this->stock;
+    }
+
+    public function setStock(int $stock): static
+    {
+        $this->stock = $stock;
 
         return $this;
     }

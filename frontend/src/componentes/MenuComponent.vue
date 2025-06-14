@@ -18,9 +18,21 @@
                         <RouterLink class="nav-link text-warning" to="/gestion-usuarios">Gestión de Usuarios
                         </RouterLink>
                     </li>
-                    <li v-if="rolToken == 'administrador'" class="nav-item">
-                        <RouterLink class="nav-link text-warning" to="/gestion-videojuegos">Gestión de Videojuegos
-                        </RouterLink>
+                    <li v-if="rolToken == 'administrador'" class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle text-warning" href="#" id="navbarDropdown" role="button"
+                            data-bs-toggle="dropdown" aria-expanded="false">
+                            Gestión de Videojuegos
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
+                            <li>
+                                <RouterLink class="dropdown-item" to="/gestion-videojuegos">Nuestros Videojuegos
+                                </RouterLink>
+                            </li>
+                            <li>
+                                <RouterLink class="dropdown-item" to="/gestion-videojuegos-nuevo">Añadir Videojuego
+                                </RouterLink>
+                            </li>
+                        </ul>
                     </li>
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle text-white" href="#" id="navbarDropdown" role="button"

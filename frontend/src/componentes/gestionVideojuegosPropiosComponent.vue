@@ -1,0 +1,277 @@
+<template>
+    <MenuComponent />
+    <div class="container my-5 text-white">
+        <h2 class="mb-4 text-center">Videojuegos de mi base de datos</h2>
+        <div v-if="cargando" class="text-center my-5">
+            <span class="spinner-border"></span>
+        </div>
+        <div v-else>
+            <div class="row g-4">
+                <div v-for="juego in videojuegosPaginados" :key="juego.id" class="col-12 col-md-6 col-lg-4">
+                    <div class="card h-100 bg-white text-dark">
+                        <div v-if="juego.imagenes && juego.imagenes.length">
+                            <div class="carrusel-img-wrapper">
+                                <img v-for="(img, idx) in juego.imagenes" :key="img.url" :src="img.url"
+                                    class="carrusel-img" :class="{
+                                        active: (indicesCarrusel[juego.id] || 0) === idx
+                                    }" :alt="juego.nombre + ' screenshot'">
+                                <span v-if="juego.imagenes[indicesCarrusel[juego.id] || 0].portada"
+                                    class="badge bg-primary position-absolute"
+                                    style="top:10px;left:10px;z-index:3;">Portada</span>
+                                <button v-if="juego.imagenes.length > 1"
+                                    class="btn btn-dark position-absolute top-50 start-0 translate-middle-y"
+                                    style="z-index:2;" @click="prevImagen(juego.id, juego.imagenes.length)"><i
+                                        class="fa-solid fa-chevron-left"></i></button>
+                                <button v-if="juego.imagenes.length > 1"
+                                    class="btn btn-dark position-absolute top-50 end-0 translate-middle-y"
+                                    style="z-index:2;" @click="nextImagen(juego.id, juego.imagenes.length)"><i
+                                        class="fa-solid fa-chevron-right"></i></button>
+                            </div>
+                        </div>
+                        <div v-else>
+                            <img src="https://via.placeholder.com/400x220?text=Sin+imagen" class="card-img-top"
+                                alt="Sin imagen">
+                        </div>
+                        <div class="card-body d-flex flex-column text-dark">
+                            <h5 class="card-title">{{ juego.nombre }}</h5>
+                            <p class="card-text mb-2"><strong>Fecha de lanzamiento:</strong> {{ juego.fecha_lanzamiento
+                                }}</p>
+                            <div v-if="errores[juego.id] && editandoId === juego.id"
+                                class="alert alert-danger py-2 mb-2">{{
+                                    errores[juego.id] }}</div>
+                            <p class="card-text mb-2"><strong>Precio:</strong>
+                                <span v-if="editandoId !== juego.id">{{ juego.precio }} €</span>
+                                <input v-else type="number" min="0" step="0.01"
+                                    class="form-control d-inline w-auto ms-2" v-model.number="precioEdit" />
+                            </p>
+                            <p class="card-text mb-2"><strong>Stock:</strong>
+                                <span v-if="editandoId !== juego.id">{{ juego.stock }}</span>
+                                <input v-else type="number" min="0" step="1" class="form-control d-inline w-auto ms-2"
+                                    v-model.number="stockEdit" />
+                            </p>
+                            <p class="card-text mb-2"><strong>Plataforma:</strong> {{ juego.plataforma }}</p>
+                            <div class="mb-2">
+                                <strong>Categorías: </strong>
+                                <span v-if="juego.categorias && juego.categorias.length">
+                                    <span v-for="(cat, idx) in juego.categorias" :key="cat">
+                                        {{ cat }}<span v-if="idx < juego.categorias.length - 1">, </span>
+                                    </span>
+                                </span>
+                                <span v-else class="text-muted">No disponible</span>
+                            </div>
+                            <div class="mt-auto d-flex">
+                                <button v-if="editandoId !== juego.id" class="btn btn-warning btn-sm"
+                                    @click="empezarEdicion(juego)">
+                                    <i class="fa fa-edit me-1"></i>Editar
+                                </button>
+                                <button v-else class="btn btn-success btn-sm me-1" @click="guardarEdicion(juego)">
+                                    <i class="fa fa-save me-1"></i>Guardar
+                                </button>
+                                <button v-if="editandoId === juego.id" class="btn btn-secondary btn-sm"
+                                    @click="cancelarEdicion">
+                                    <i class="fa fa-times me-1"></i>Cancelar
+                                </button>
+                                <button class="btn btn-danger btn-sm ms-auto" data-bs-toggle="modal"
+                                    data-bs-target="#modalEliminar" @click="abrirModalEliminar(juego)">
+                                    <i class="fa fa-trash me-1"></i>Eliminar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex justify-content-center mt-4">
+                <button class="btn btn-primary me-2" :disabled="pagina === 1" @click="pagina--">Anterior</button>
+                <span class="align-self-center">Página {{ pagina }}</span>
+                <button class="btn btn-primary ms-2" :disabled="pagina === totalPaginas"
+                    @click="pagina++">Siguiente</button>
+            </div>
+        </div>
+        <ScrollBotonComponent />
+    </div>
+    <PiePaginaComponent />
+
+    <!-- Modal de confirmación de borrado -->
+    <div class="modal fade" id="modalEliminar" tabindex="-1" aria-labelledby="modalEliminarLabel" aria-hidden="true"
+        ref="modalEliminarRef">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalEliminarLabel">Confirmar eliminación</h5>
+                </div>
+                <div class="modal-body">
+                    ¿Seguro que quieres eliminar el videojuego <strong>{{ juegoAEliminar?.nombre }}</strong>?
+                    <div v-if="errores[juegoAEliminar?.id]" class="alert alert-danger mt-3">{{
+                        errores[juegoAEliminar?.id] }}</div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-danger" @click="confirmarEliminar">Eliminar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+
+<script setup lang="ts">
+import { ref, computed, onMounted } from 'vue';
+import urlBackend from '@/rutaApi';
+import MenuComponent from './menuComponent.vue';
+import { jwtDecode } from 'jwt-decode';
+import { useRouter } from 'vue-router';
+import ScrollBotonComponent from './scrollBotonComponent.vue';
+import PiePaginaComponent from './piePaginaComponent.vue';
+
+const videojuegos = ref<any[]>([]);
+const cargando = ref(false);
+const pagina = ref(1);
+const porPagina = 9;
+const router = useRouter();
+
+const totalPaginas = computed(() => Math.ceil(videojuegos.value.length / porPagina));
+const videojuegosPaginados = computed(() => {
+    const start = (pagina.value - 1) * porPagina;
+    return videojuegos.value.slice(start, start + porPagina);
+});
+
+const fetchVideojuegos = async () => {
+    cargando.value = true;
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(urlBackend + '/api/videojuegos/listarVideojuegos', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token })
+        });
+        const data = await response.json();
+        videojuegos.value = data || [];
+    } catch (e) {
+        videojuegos.value = [];
+    } finally {
+        cargando.value = false;
+    }
+};
+
+const indicesCarrusel = ref<{ [key: number]: number }>({});
+const prevImagen = (juegoId: number, total: number) => {
+    const idx = indicesCarrusel.value[juegoId] || 0;
+    indicesCarrusel.value[juegoId] = (idx - 1 + total) % total;
+};
+const nextImagen = (juegoId: number, total: number) => {
+    const idx = indicesCarrusel.value[juegoId] || 0;
+    indicesCarrusel.value[juegoId] = (idx + 1) % total;
+};
+
+const editandoId = ref<number | null>(null);
+const precioEdit = ref<number>(0);
+const stockEdit = ref<number>(0);
+const errores = ref<{ [key: number]: string }>({});
+const juegoAEliminar = ref<any | null>(null);
+const modalEliminarRef = ref<any>(null);
+let modalEliminarInstance: any = null;
+
+const empezarEdicion = (juego: any) => {
+    editandoId.value = juego.id;
+    precioEdit.value = juego.precio;
+    stockEdit.value = juego.stock;
+    errores.value[juego.id] = '';
+};
+const cancelarEdicion = () => {
+    editandoId.value = null;
+};
+const guardarEdicion = async (juego: any) => {
+    errores.value[juego.id] = '';
+    if (precioEdit.value <= 0 || isNaN(precioEdit.value)) {
+        errores.value[juego.id] = 'El precio debe ser mayor que 0';
+        return;
+    }
+    if (stockEdit.value < 0 || !Number.isInteger(stockEdit.value)) {
+        errores.value[juego.id] = 'El stock debe ser un número entero mayor o igual que 0';
+        return;
+    }
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(urlBackend + `/api/videojuegos/editar/${juego.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ precio: precioEdit.value, stock: stockEdit.value })
+        });
+        if (response.ok) {
+            juego.precio = precioEdit.value;
+            juego.stock = stockEdit.value;
+            editandoId.value = null;
+        } else {
+            errores.value[juego.id] = 'Error al guardar los cambios';
+        }
+    } catch (e) {
+        errores.value[juego.id] = 'Error de red o servidor';
+    }
+};
+const abrirModalEliminar = (juego: any) => {
+    juegoAEliminar.value = juego;
+    errores.value[juego.id] = '';
+};
+const confirmarEliminar = async () => {
+    if (!juegoAEliminar.value) return;
+    const juego = juegoAEliminar.value;
+    errores.value[juego.id] = '';
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(urlBackend + `/api/videojuegos/eliminar/${juego.id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (response.ok) {
+            videojuegos.value = videojuegos.value.filter(v => v.id !== juego.id);
+            if (modalEliminarInstance) modalEliminarInstance.hide();
+        } else {
+            const data = await response.json();
+            errores.value[juego.id] = data?.error || 'Error al eliminar el videojuego';
+        }
+    } catch (e) {
+        errores.value[juego.id] = 'Error de red o servidor';
+    }
+};
+
+onMounted(() => {
+    // Comprobación de rol administrador
+    const token = localStorage.getItem('token');
+    const rolToken = jwtDecode<any>(localStorage.getItem('token') || '').roles[0];
+    if (rolToken != "administrador") {
+        router.push('/inicio');
+    } else {
+        fetchVideojuegos();
+    }
+});
+</script>
+
+<style scoped>
+.card-img-top {
+    object-fit: cover;
+    height: 220px;
+}
+
+.carrusel-img-wrapper {
+    position: relative;
+    width: 100%;
+    height: 220px;
+    overflow: hidden;
+}
+
+.carrusel-img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    z-index: 1;
+    transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.carrusel-img.active {
+    opacity: 1;
+    z-index: 2;
+    transform: translateX(0);
+}
+</style>

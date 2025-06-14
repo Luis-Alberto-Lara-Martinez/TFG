@@ -8,7 +8,6 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Attribute\Route;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use App\Entity\Usuarios;
 
@@ -88,5 +87,40 @@ final class UsuariosController extends AbstractController
         $token = $jwtManager->createFromPayload($usuario, $payload);
 
         return new JsonResponse(['token' => $token]);
+    }
+
+    #[Route('/listarUsuarios', name: 'listar_usuarios', methods: ['POST'])]
+    public function listarUsuarios(Request $request, EntityManagerInterface $em, JWTTokenManagerInterface $jwtManager): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+        $token = $data['token'] ?? null;
+        if (!$token) {
+            return new JsonResponse(['error' => 'Token no proporcionado'], 401);
+        }
+        try {
+            $userData = $jwtManager->parse($token);
+        } catch (\Exception $e) {
+            return new JsonResponse(['error' => 'Token inválido'], 401);
+        }
+
+        $usuarios = $em->getRepository(Usuarios::class)->findAll();
+        $result = [];
+        foreach ($usuarios as $usuario) {
+            $result[] = [
+                'id' => $usuario->getId(),
+                'nombre' => $usuario->getNombre(),
+                'apellido' => $usuario->getApellido(),
+                'email' => $usuario->getEmail(),
+                'telefono' => $usuario->getTelefono(),
+                'direccion' => $usuario->getDireccion(),
+                'rol' => $usuario->getRol()->getNombre(),
+                'createdAt' => $usuario->getCreatedAt()->format('d/m/Y H:i:s'),
+                'modifiedAt' => $usuario->getModifiedAt() ? $usuario->getModifiedAt()->format('d/m/Y H:i:s') : null,
+                'deleted' => $usuario->isDeleted(),
+                'createdBy' => $usuario->getCreatedBy() ? $usuario->getCreatedBy()->getNombre() . " " . $usuario->getCreatedBy()->getApellido() : null,
+                'modifiedBy' => $usuario->getModifiedBy() ? $usuario->getModifiedBy()->getNombre() . " " . $usuario->getModifiedBy()->getApellido() : null,
+            ];
+        }
+        return new JsonResponse($result);
     }
 }

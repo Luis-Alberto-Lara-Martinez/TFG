@@ -1,7 +1,7 @@
 <template>
     <MenuComponent />
     <div class="container my-5 text-white">
-        <h2 class="mb-4 text-center">Gestión de Videojuegos (RAWG API)</h2>
+        <h2 class="mb-4 text-center">Añadir Nuevo Videojuego (RAWG API)</h2>
         <form class="mb-4 d-flex" @submit.prevent="buscar">
             <input v-model="busqueda" type="search" class="form-control me-2"
                 placeholder="Buscar videojuego por nombre">
@@ -47,7 +47,32 @@
                             <h5 class="card-title">{{ juego.name }}</h5>
                             <p class="card-text mb-2"><strong>Fecha de lanzamiento:</strong> {{ juego.released }}</p>
                             <p class="card-text mb-2"><strong>Rating:</strong> {{ juego.rating }}</p>
-                            <button class="btn btn-primary mt-auto" @click="anadirJuego(juego)">Añadir a mi web</button>
+                            <div class="mb-2">
+                                <label class="form-label mb-1">Plataformas:</label>
+                                <select class="form-select" v-if="juego.platforms && juego.platforms.length"
+                                    v-model="plataformasSeleccionadas[juego.id]">
+                                    <option v-for="plataforma in juego.platforms" :key="plataforma.platform.id"
+                                        :value="plataforma.platform.name">
+                                        {{ plataforma.platform.name }}
+                                    </option>
+                                </select>
+                                <span v-else class="text-muted">No disponible</span>
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label mb-1">Precio (€):</label>
+                                <input type="number" min="0" step="0.01" class="form-control"
+                                    v-model="precios[juego.id]" placeholder="Precio" />
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label mb-1">Stock:</label>
+                                <input type="number" min="0" step="1" class="form-control" v-model="stocks[juego.id]"
+                                    placeholder="Stock" />
+                            </div>
+                            <div v-if="errores[juego.id]" class="alert alert-danger py-2 mb-2">{{ errores[juego.id] }}
+                            </div>
+                            <button class="btn btn-primary mt-auto"
+                                @click="anadirJuego(juego, plataformasSeleccionadas[juego.id], precios[juego.id], stocks[juego.id])">Añadir
+                                a mi web</button>
                         </div>
                     </div>
                 </div>
@@ -59,22 +84,30 @@
                     @click="pagina++">Siguiente</button>
             </div>
         </div>
+        <ScrollBotonComponent />
     </div>
+    <PiePaginaComponent />
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue';
+import { ref, watch, onMounted, nextTick } from 'vue';
 import urlBackend from '@/rutaApi';
 import MenuComponent from './menuComponent.vue';
 import { useRouter } from 'vue-router';
+import PiePaginaComponent from './piePaginaComponent.vue';
+import ScrollBotonComponent from './scrollBotonComponent.vue';
 
 const juegos = ref<any[]>([]);
+const plataformasSeleccionadas = ref<{ [key: number]: string }>({});
 const cargando = ref(false);
 const pagina = ref(1);
 const busqueda = ref("");
 const pageSize = 20;
 const siguienteHabilitado = ref(true);
 const indicesCarrusel = ref<{ [key: number]: number }>({});
+const precios = ref<{ [key: number]: number }>({});
+const stocks = ref<{ [key: number]: number }>({});
+const errores = ref<{ [key: number]: string }>({});
 const router = useRouter();
 
 const fetchJuegos = async () => {
@@ -88,8 +121,16 @@ const fetchJuegos = async () => {
         const data = await response.json();
         juegos.value = data.results;
         siguienteHabilitado.value = (data.results && data.results.length === pageSize);
-        // Reinicia los índices del carrusel para cada juego
         indicesCarrusel.value = {};
+        // Inicializa la plataforma seleccionada por defecto para cada juego
+        await nextTick();
+        juegos.value.forEach(juego => {
+            if (juego.platforms && juego.platforms.length) {
+                plataformasSeleccionadas.value[juego.id] = juego.platforms[0].platform.name;
+            } else {
+                plataformasSeleccionadas.value[juego.id] = '';
+            }
+        });
     } catch (e) {
         juegos.value = [];
     } finally {
@@ -123,22 +164,34 @@ watch(pagina, () => {
 
 onMounted(fetchJuegos);
 
-const anadirJuego = async (juego: any) => {
+const anadirJuego = async (juego: any, plataformaSeleccionada?: string, precio?: number, stock?: number) => {
+    // Validaciones
+    errores.value[juego.id] = '';
+    if (precio === undefined || precio === null || isNaN(precio) || precio <= 0) {
+        errores.value[juego.id] = 'El precio debe ser un número mayor que 0.';
+        return;
+    }
+    if (stock === undefined || stock === null || isNaN(stock) || stock < 0 || !Number.isInteger(stock)) {
+        errores.value[juego.id] = 'El stock debe ser un número entero mayor o igual que 0.';
+        return;
+    }
     try {
-        // Verifica si el usuario está autenticado antes de intentar añadir un juego
         const token = localStorage.getItem("token");
         if (!token) {
-            // Simular un alert con un modal simple si no está autenticado
             alert('Debes iniciar sesión para añadir videojuegos.');
-            router.push('/login'); // Redirige al login si no hay token
+            router.push('/login');
             return;
         }
-
+        const imagenes = (juego.short_screenshots || []).map((img: any) => ({
+            url: img.image,
+            portada: img.id === -1
+        }));
+        const generos = (juego.genres || []).map((g: { name: string }) => g.name);
         const response = await fetch(urlBackend + '/api/videojuegos', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}` // Añadir el token de autenticación
+                'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify({
                 nombre: juego.name,
@@ -146,24 +199,20 @@ const anadirJuego = async (juego: any) => {
                 fecha_lanzamiento: juego.released,
                 rating: juego.rating,
                 rawg_id: juego.id,
-                // Añade más campos si tu backend los requiere, como plataformas, géneros, etc.
+                plataforma: plataformaSeleccionada || null,
+                precio: precio,
+                stock: stock,
+                imagenes,
+                generos
             })
         });
-
         if (response.ok) {
-            // Usar un modal personalizado en lugar de alert()
-            alert('¡Videojuego añadido a tu web correctamente!'); // Reemplazar con un modal
-        } else if (response.status === 401) {
-            alert('No autorizado. Por favor, inicia sesión de nuevo.'); // Reemplazar con un modal
-            localStorage.removeItem("token");
-            router.push('/login');
+            alert('¡Videojuego añadido a tu web!');
         } else {
-            const errorData = await response.json();
-            alert(`Error al añadir el videojuego: ${errorData.message || response.statusText}`); // Reemplazar con un modal
+            alert('Error al añadir el videojuego.');
         }
     } catch (e) {
-        console.error("Error de red o servidor al añadir videojuego:", e);
-        alert('Error de red o servidor al añadir el videojuego.'); // Reemplazar con un modal
+        alert('Error de red o servidor.');
     }
 };
 </script>
