@@ -33,6 +33,7 @@
                 <span v-else>Guardar cambios</span>
             </button>
         </form>
+        <ScrollBotonComponent />
     </div>
     <PiePaginaComponent />
 </template>
@@ -43,6 +44,7 @@ import MenuComponent from './menuComponent.vue';
 import PiePaginaComponent from './piePaginaComponent.vue';
 import urlBackend from '@/rutaApi';
 import { useRouter } from 'vue-router';
+import ScrollBotonComponent from './scrollBotonComponent.vue';
 
 const usuario = ref<any>({});
 const cargando = ref(true);

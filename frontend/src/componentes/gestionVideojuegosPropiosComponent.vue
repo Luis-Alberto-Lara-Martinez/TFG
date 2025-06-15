@@ -29,15 +29,12 @@
                             </div>
                         </div>
                         <div v-else>
-                            <img src="https://via.placeholder.com/400x220?text=Sin+imagen" class="card-img-top"
-                                alt="Sin imagen">
+                            <span>Sin imágenes</span>
                         </div>
                         <div class="card-body d-flex flex-column text-dark">
                             <h5 class="card-title">{{ juego.nombre }}</h5>
-                            <p class="card-text mb-2"><strong>Fecha de lanzamiento:</strong> {{ juego.fecha_lanzamiento
-                                }}</p>
                             <p class="card-text mb-2"><strong>Precio: </strong>
-                                <span v-if="editandoId !== juego.id">{{ juego.precio }} €</span>
+                                <span v-if="editandoId !== juego.id">{{ formatPrice(juego.precio) }} €</span>
                                 <input v-else type="number" min="0" step="0.01"
                                     class="form-control d-inline w-auto ms-2" v-model.number="precioEdit" />
                             </p>
@@ -46,23 +43,30 @@
                                 <input v-else type="number" min="0" step="1" class="form-control d-inline w-auto ms-2"
                                     v-model.number="stockEdit" />
                             </p>
-                            <p class="card-text mb-2"><strong>Plataforma:</strong> {{ juego.plataforma }}</p>
-                            <div class="mb-2">
-                                <strong>Categorías: </strong>
-                                <span v-if="juego.categorias && juego.categorias.length">
-                                    <span v-for="(cat, idx) in juego.categorias" :key="cat">
-                                        {{ cat }}<span v-if="idx < juego.categorias.length - 1">, </span>
-                                    </span>
+                            <div class="mb-3">
+                                <strong>Estado: </strong>
+                                <span v-if="editandoId === juego.id">
+                                    <select v-model="estadoEdit"
+                                        class="form-select form-select-sm w-auto d-inline ms-2">
+                                        <option :value="false">Activo</option>
+                                        <option :value="true">Inactivo</option>
+                                    </select>
                                 </span>
-                                <span v-else class="text-muted">No disponible</span>
+                                <span v-else>
+                                    <span v-if="juego.deleted" class="badge bg-danger">Inactivo</span>
+                                    <span v-else class="badge bg-success">Activo</span>
+                                </span>
                             </div>
-                            <div class="mt-auto d-flex mb-3">
+                            <div class="mt-auto d-flex">
                                 <button v-if="editandoId !== juego.id" class="btn btn-warning btn-sm"
                                     @click="empezarEdicion(juego)">
                                     <i class="fa fa-edit me-1"></i>Editar
                                 </button>
-                                <button v-else class="btn btn-success btn-sm me-1" @click="guardarEdicion(juego)">
-                                    <i class="fa fa-save me-1"></i>Guardar
+                                <button v-else class="btn btn-success btn-sm me-1" @click="guardarEdicion(juego)"
+                                    :disabled="cargandoEdicion">
+                                    <span v-if="cargandoEdicion" class="spinner-border spinner-border-sm me-2"></span>
+                                    <i v-else class="fa fa-save me-1"></i>
+                                    Guardar
                                 </button>
                                 <button v-if="editandoId === juego.id" class="btn btn-secondary btn-sm"
                                     @click="cancelarEdicion">
@@ -92,7 +96,6 @@
     </div>
     <PiePaginaComponent />
 
-    <!-- Modal de confirmación de borrado -->
     <div class="modal fade" id="modalEliminar" tabindex="-1" aria-labelledby="modalEliminarLabel" aria-hidden="true"
         ref="modalEliminarRef">
         <div class="modal-dialog">
@@ -107,7 +110,11 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-danger" @click="confirmarEliminar">Eliminar</button>
+                    <button type="button" class="btn btn-danger" @click="confirmarEliminar"
+                        :disabled="cargandoEliminacion">
+                        <span v-if="cargandoEliminacion" class="spinner-border spinner-border-sm me-1"></span>
+                        Eliminar
+                    </button>
                 </div>
             </div>
         </div>
@@ -166,46 +173,55 @@ const nextImagen = (juegoId: number, total: number) => {
 const editandoId = ref<number | null>(null);
 const precioEdit = ref<number>(0);
 const stockEdit = ref<number>(0);
+const estadoEdit = ref(false);
+const nombreEdit = ref('');
+const plataformaEdit = ref('');
 const errores = ref<{ [key: number]: string }>({});
 const juegoAEliminar = ref<any | null>(null);
 const modalEliminarRef = ref<any>(null);
 let modalEliminarInstance: any = null;
+const cargandoEdicion = ref(false);
+const cargandoEliminacion = ref(false);
 
 const empezarEdicion = (juego: any) => {
     editandoId.value = juego.id;
+    nombreEdit.value = juego.nombre;
+    plataformaEdit.value = juego.plataforma;
     precioEdit.value = juego.precio;
     stockEdit.value = juego.stock;
+    estadoEdit.value = !!juego.deleted;
     errores.value[juego.id] = '';
 };
 const cancelarEdicion = () => {
     editandoId.value = null;
 };
 const guardarEdicion = async (juego: any) => {
+    cargandoEdicion.value = true;
     errores.value[juego.id] = '';
-    if (precioEdit.value <= 0 || isNaN(precioEdit.value)) {
-        errores.value[juego.id] = 'El precio debe ser mayor que 0';
-        return;
-    }
-    if (stockEdit.value < 0 || !Number.isInteger(stockEdit.value)) {
-        errores.value[juego.id] = 'El stock debe ser un número entero mayor o igual que 0';
-        return;
-    }
     try {
         const token = localStorage.getItem('token');
-        const response = await fetch(urlBackend + `/api/videojuegos/editar/${juego.id}`, {
+        const body = {
+            precio: precioEdit.value,
+            stock: stockEdit.value,
+            deleted: estadoEdit.value,
+            token
+        };
+        const response = await fetch(urlBackend + '/api/videojuegos/editar/' + juego.id, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ precio: precioEdit.value, stock: stockEdit.value })
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
         });
-        if (response.ok) {
-            juego.precio = precioEdit.value;
-            juego.stock = stockEdit.value;
-            editandoId.value = null;
+        const data = await response.json();
+        if (data.error) {
+            errores.value[juego.id] = data.error;
         } else {
-            errores.value[juego.id] = 'Error al guardar los cambios';
+            await fetchVideojuegos();
+            editandoId.value = null;
         }
     } catch (e) {
-        errores.value[juego.id] = 'Error de red o servidor';
+        errores.value[juego.id] = 'Error al guardar los cambios';
+    } finally {
+        cargandoEdicion.value = false;
     }
 };
 const abrirModalEliminar = (juego: any) => {
@@ -213,6 +229,7 @@ const abrirModalEliminar = (juego: any) => {
     errores.value[juego.id] = '';
 };
 const confirmarEliminar = async () => {
+    cargandoEliminacion.value = true;
     if (!juegoAEliminar.value) return;
     const juego = juegoAEliminar.value;
     errores.value[juego.id] = '';
@@ -220,18 +237,31 @@ const confirmarEliminar = async () => {
         const token = localStorage.getItem('token');
         const response = await fetch(urlBackend + `/api/videojuegos/eliminar/${juego.id}`, {
             method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${token}` }
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: token })
         });
         if (response.ok) {
             videojuegos.value = videojuegos.value.filter(v => v.id !== juego.id);
-            if (modalEliminarInstance) modalEliminarInstance.hide();
+            location.reload();
         } else {
             const data = await response.json();
             errores.value[juego.id] = data?.error || 'Error al eliminar el videojuego';
         }
     } catch (e) {
         errores.value[juego.id] = 'Error de red o servidor';
+    } finally {
+        cargandoEliminacion.value = false;
     }
+};
+
+const formatPrice = (price: number): string => {
+    if (typeof price !== 'number') {
+        return '0,00';
+    }
+    return price.toLocaleString('es-ES', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
 };
 
 function scrollArriba() {
