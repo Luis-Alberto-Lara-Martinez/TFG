@@ -253,4 +253,106 @@ final class UsuariosController extends AbstractController
         $em->flush();
         return new JsonResponse(['success' => true]);
     }
+
+    #[Route('/compras/historial', name: 'historial_compras', methods: ['POST'])]
+    public function historialCompras(Request $request, EntityManagerInterface $em, JWTTokenManagerInterface $jwtManager): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+        $token = $data['token'] ?? null;
+        if (!$token) {
+            return new JsonResponse(['error' => 'Token no proporcionado'], 401);
+        }
+        try {
+            $userData = $jwtManager->parse($token);
+        } catch (\Exception $e) {
+            return new JsonResponse(['error' => 'Token inválido'], 401);
+        }
+        $usuario = $em->getRepository(Usuarios::class)->find($userData['id'] ?? 0);
+        if (!$usuario) {
+            return new JsonResponse(['error' => 'Usuario no encontrado'], 404);
+        }
+        $compras = $usuario->getCompras(); // Asumiendo relación getCompras()
+        $result = [];
+        foreach ($compras as $compra) {
+            $detalles = [];
+            foreach ($compra->getDetalles() as $detalle) {
+                $detalles[] = [
+                    'id' => $detalle->getId(),
+                    'titulo' => $detalle->getVideojuego()->getNombre(),
+                    'cantidad' => $detalle->getCantidad(),
+                    'precio' => $detalle->getPrecio(),
+                    'plataforma' => $detalle->getVideojuego()->getPlataforma() ? $detalle->getVideojuego()->getPlataforma()->getNombre() : null
+                ];
+            }
+            $result[] = [
+                'id' => $compra->getId(),
+                'fecha' => $compra->getFecha()->format('d/m/Y H:i'),
+                'total' => $compra->getTotal(),
+                'detalles' => $detalles
+            ];
+        }
+        return new JsonResponse($result);
+    }
+
+    #[Route('/carrito/obtener', name: 'obtener_carrito', methods: ['POST'])]
+    public function obtenerCarrito(Request $request, EntityManagerInterface $em, JWTTokenManagerInterface $jwtManager): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+        $token = $data['token'] ?? null;
+        if (!$token) {
+            return new JsonResponse(['error' => 'Token no proporcionado'], 401);
+        }
+        try {
+            $userData = $jwtManager->parse($token);
+        } catch (\Exception $e) {
+            return new JsonResponse(['error' => 'Token inválido'], 401);
+        }
+        $usuario = $em->getRepository(Usuarios::class)->find($userData['id'] ?? 0);
+        if (!$usuario) {
+            return new JsonResponse(['error' => 'Usuario no encontrado'], 404);
+        }
+        $carrito = $usuario->getCarrito() ?? [];
+        $result = [];
+        foreach ($carrito as $item) {
+            $videojuego = $em->getRepository(\App\Entity\Videojuegos::class)->find($item['videojuego_id']);
+            if ($videojuego) {
+                $result[] = [
+                    'videojuego_id' => $item['videojuego_id'],
+                    'nombre' => $videojuego->getNombre(),
+                    'plataforma' => $videojuego->getPlataforma() ? $videojuego->getPlataforma()->getNombre() : null,
+                    'precio' => $videojuego->getPrecio(),
+                    'cantidad' => $item['cantidad']
+                ];
+            }
+        }
+        return new JsonResponse($result);
+    }
+
+    #[Route('/carrito/eliminar', name: 'eliminar_carrito', methods: ['POST'])]
+    public function eliminarDelCarrito(Request $request, EntityManagerInterface $em, JWTTokenManagerInterface $jwtManager): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+        $token = $data['token'] ?? null;
+        $videojuegoId = $data['videojuegoId'] ?? null;
+        if (!$token || !$videojuegoId) {
+            return new JsonResponse(['error' => 'Faltan datos'], 400);
+        }
+        try {
+            $userData = $jwtManager->parse($token);
+        } catch (\Exception $e) {
+            return new JsonResponse(['error' => 'Token inválido'], 401);
+        }
+        $usuario = $em->getRepository(Usuarios::class)->find($userData['id'] ?? 0);
+        if (!$usuario) {
+            return new JsonResponse(['error' => 'Usuario no encontrado'], 404);
+        }
+        $carrito = $usuario->getCarrito() ?? [];
+        $nuevoCarrito = array_filter($carrito, function($item) use ($videojuegoId) {
+            return $item['videojuego_id'] != $videojuegoId;
+        });
+        $usuario->setCarrito(array_values($nuevoCarrito));
+        $em->persist($usuario);
+        $em->flush();
+        return new JsonResponse(['success' => true]);
+    }
 }

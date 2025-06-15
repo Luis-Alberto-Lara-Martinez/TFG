@@ -46,6 +46,9 @@
                                 <RouterLink class="dropdown-item" to="/datos-personales">Datos personales</RouterLink>
                             </li>
                             <li>
+                                <RouterLink class="dropdown-item" to="/historial-compras">Historial de compras</RouterLink>
+                            </li>
+                            <li>
                                 <a class="dropdown-item btn" data-bs-toggle="modal"
                                     data-bs-target="#modalCambiarContrasena">Cambiar Contraseña</a>
                             </li>
