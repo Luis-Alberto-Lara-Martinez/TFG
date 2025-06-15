@@ -1,46 +1,55 @@
 <template>
-    <div class="d-flex justify-content-center align-items-center vh-100">
-        <div class="bg-white p-5 rounded w-50">
-            <form @submit.prevent="registrarUsuario">
-                <h2 class="text-center mb-4">Registro</h2>
-                <div class="mb-3">
-                    <label for="nombre" class="form-label">Nombre <span class="text-danger">*</span></label>
-                    <input v-model="nombre" type="text" id="nombre" class="form-control" required />
+    <div class="container">
+        <video class="registro-video-bg" autoplay muted loop playsinline>
+            <source src="/portada2.mp4" type="video/mp4" />
+        </video>
+        <div class="d-flex justify-content-center align-items-center vh-100 registro-overlay my-5">
+            <div class="login p-5 rounded d-flex flex-column text-white">
+                <h2 class="text-center mb-4">
+                    <img src="/favicon.png" alt="Logo" style="width: 100px;">
+                    Todo Videojuegos
+                </h2>
+                <form @submit.prevent="registrarUsuario">
+                    <div class="mb-3">
+                        <label for="nombre" class="form-label">Nombre <span class="text-danger">*</span></label>
+                        <input v-model="nombre" type="text" id="nombre" class="form-control" required />
+                    </div>
+                    <div class="mb-3">
+                        <label for="apellido" class="form-label">Apellido <span class="text-danger">*</span></label>
+                        <input v-model="apellido" type="text" id="apellido" class="form-control" required />
+                    </div>
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email <span class="text-danger">*</span></label>
+                        <input v-model="email" type="email" id="email" class="form-control" required />
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Contraseña <span class="text-danger">*</span></label>
+                        <input v-model="password" type="password" id="password" class="form-control" required />
+                    </div>
+                    <div class="mb-3">
+                        <label for="telefono" class="form-label">Teléfono <span class="text-danger">*</span></label>
+                        <input v-model="telefono" type="text" id="telefono" class="form-control" required />
+                    </div>
+                    <div class="mb-3">
+                        <label for="direccion" class="form-label">Dirección <span class="text-danger">*</span></label>
+                        <input v-model="direccion" type="text" id="direccion" class="form-control" required />
+                    </div>
+                    <div v-if="error" class="mb-3">
+                        <div class="alert alert-danger">{{ error }}</div>
+                    </div>
+                    <div v-if="exito" class="mb-3">
+                        <div class="alert alert-success">Usuario registrado correctamente. Ya puedes iniciar sesión.
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100" :disabled="cargando">
+                        <span v-if="cargando" class="spinner-border spinner-border-sm me-2"></span>
+                        <span v-else>Registrarse</span>
+                    </button>
+                </form>
+                <div class="mt-3 text-center">
+                    <span>¿Ya tienes cuenta?</span>
+                    <button class="btn btn-link p-0 ms-1" @click="router.push('/login')">Inicia sesión</button>
                 </div>
-                <div class="mb-3">
-                    <label for="apellido" class="form-label">Apellido <span class="text-danger">*</span></label>
-                    <input v-model="apellido" type="text" id="apellido" class="form-control" required />
-                </div>
-                <div class="mb-3">
-                    <label for="email" class="form-label">Email <span class="text-danger">*</span></label>
-                    <input v-model="email" type="email" id="email" class="form-control" required />
-                </div>
-                <div class="mb-3">
-                    <label for="password" class="form-label">Contraseña <span class="text-danger">*</span></label>
-                    <input v-model="password" type="password" id="password" class="form-control" required />
-                </div>
-                <div class="mb-3">
-                    <label for="telefono" class="form-label">Teléfono <span class="text-danger">*</span></label>
-                    <input v-model="telefono" type="text" id="telefono" class="form-control" required />
-                </div>
-                <div class="mb-3">
-                    <label for="direccion" class="form-label">Dirección <span class="text-danger">*</span></label>
-                    <input v-model="direccion" type="text" id="direccion" class="form-control" required />
-                </div>
-                <div v-if="error" class="mb-3">
-                    <div class="alert alert-danger">{{ error }}</div>
-                </div>
-                <div v-if="exito" class="mb-3">
-                    <div class="alert alert-success">Usuario registrado correctamente. Ya puedes iniciar sesión.</div>
-                </div>
-                <button type="submit" class="btn btn-success w-100" :disabled="cargando">
-                    <span v-if="cargando" class="spinner-border spinner-border-sm me-2"></span>
-                    <span v-else>Registrarse</span>
-                </button>
-            </form>
-            <div class="mt-3 text-center">
-                <span>¿Ya tienes cuenta?</span>
-                <button class="btn btn-link p-0 ms-1" @click="router.push('/login')">Inicia sesión</button>
             </div>
         </div>
     </div>
@@ -94,3 +103,24 @@ const registrarUsuario = async () => {
     }
 };
 </script>
+
+<style scoped>
+.registro-video-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    object-fit: cover;
+    z-index: -1;
+}
+
+.registro-overlay {
+    position: relative;
+    z-index: 1;
+}
+
+.login {
+    background-color: rgba(0, 0, 0, 0.7)!important;
+}
+</style>

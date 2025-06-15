@@ -36,15 +36,12 @@
                             <h5 class="card-title">{{ juego.nombre }}</h5>
                             <p class="card-text mb-2"><strong>Fecha de lanzamiento:</strong> {{ juego.fecha_lanzamiento
                                 }}</p>
-                            <div v-if="errores[juego.id] && editandoId === juego.id"
-                                class="alert alert-danger py-2 mb-2">{{
-                                    errores[juego.id] }}</div>
-                            <p class="card-text mb-2"><strong>Precio:</strong>
+                            <p class="card-text mb-2"><strong>Precio: </strong>
                                 <span v-if="editandoId !== juego.id">{{ juego.precio }} €</span>
                                 <input v-else type="number" min="0" step="0.01"
                                     class="form-control d-inline w-auto ms-2" v-model.number="precioEdit" />
                             </p>
-                            <p class="card-text mb-2"><strong>Stock:</strong>
+                            <p class="card-text mb-2"><strong>Stock: </strong>
                                 <span v-if="editandoId !== juego.id">{{ juego.stock }}</span>
                                 <input v-else type="number" min="0" step="1" class="form-control d-inline w-auto ms-2"
                                     v-model.number="stockEdit" />
@@ -59,7 +56,7 @@
                                 </span>
                                 <span v-else class="text-muted">No disponible</span>
                             </div>
-                            <div class="mt-auto d-flex">
+                            <div class="mt-auto d-flex mb-3">
                                 <button v-if="editandoId !== juego.id" class="btn btn-warning btn-sm"
                                     @click="empezarEdicion(juego)">
                                     <i class="fa fa-edit me-1"></i>Editar
@@ -76,15 +73,19 @@
                                     <i class="fa fa-trash me-1"></i>Eliminar
                                 </button>
                             </div>
+                            <div v-if="errores[juego.id] && editandoId === juego.id"
+                                class="alert alert-danger py-2 mb-2">{{
+                                    errores[juego.id] }}</div>
                         </div>
                     </div>
                 </div>
             </div>
             <div class="d-flex justify-content-center mt-4">
-                <button class="btn btn-primary me-2" :disabled="pagina === 1" @click="pagina--">Anterior</button>
+                <button class="btn btn-primary me-2" :disabled="pagina === 1"
+                    @click="pagina--; scrollArriba()">Anterior</button>
                 <span class="align-self-center">Página {{ pagina }}</span>
                 <button class="btn btn-primary ms-2" :disabled="pagina === totalPaginas"
-                    @click="pagina++">Siguiente</button>
+                    @click="pagina++; scrollArriba()">Siguiente</button>
             </div>
         </div>
         <ScrollBotonComponent />
@@ -232,6 +233,10 @@ const confirmarEliminar = async () => {
         errores.value[juego.id] = 'Error de red o servidor';
     }
 };
+
+function scrollArriba() {
+    window.scrollTo({ top: 0, behavior: "instant" });
+}
 
 onMounted(() => {
     // Comprobación de rol administrador

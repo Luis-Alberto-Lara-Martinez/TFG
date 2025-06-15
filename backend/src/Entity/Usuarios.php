@@ -59,6 +59,9 @@ class Usuarios implements UserInterface
     #[ORM\OneToMany(targetEntity: Reviews::class, mappedBy: 'usuario')]
     private Collection $reviews;
 
+    #[ORM\Column]
+    private array $carrito = [];
+
     public function __construct()
     {
         $this->reviews = new ArrayCollection();
@@ -272,5 +275,17 @@ class Usuarios implements UserInterface
     {
         // If you store any temporary, sensitive data on the user, clear it here
         // $this->plainPassword = null;
+    }
+
+    public function getCarrito(): array
+    {
+        return $this->carrito;
+    }
+
+    public function setCarrito(array $carrito): static
+    {
+        $this->carrito = $carrito;
+
+        return $this;
     }
 }

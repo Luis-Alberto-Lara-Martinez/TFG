@@ -7,6 +7,7 @@ import HistorialComprasComponent from '@/componentes/historialComprasComponent.v
 import GestionUsuariosComponent from '@/componentes/gestionUsuariosComponent.vue';
 import GestionVideojuegosPropiosComponent from '@/componentes/gestionVideojuegosPropiosComponent.vue';
 import GestionVideojuegosNuevosComponent from '@/componentes/gestionVideojuegosNuevosComponent.vue';
+import DatosPersonalesComponent from '@/componentes/datosPersonalesComponent.vue';
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -19,7 +20,7 @@ const router = createRouter({
     { path: '/gestion-usuarios', name: 'gestion-usuarios', component: GestionUsuariosComponent },
     { path: '/gestion-videojuegos', name: 'gestion-videojuegos', component: GestionVideojuegosPropiosComponent },
     { path: '/gestion-videojuegos-nuevo', name: 'gestion-videojuegos-nuevo', component: GestionVideojuegosNuevosComponent },
-
+    { path: '/datos-personales', name: 'datos-personales', component: DatosPersonalesComponent },
     { path: '/', redirect: '/inicio' },
     { path: '/:pathMatch(.*)*', redirect: '/inicio' },
   ],

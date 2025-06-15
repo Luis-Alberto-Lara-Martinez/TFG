@@ -5,9 +5,10 @@
                 <img src="/favicon.png" alt="Logo" style="height: 50px; margin-right: 10px;" />
                 <span class="fw-bold text-white">Todo Videojuegos</span>
             </RouterLink>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navegacion"
-                aria-controls="navegacion" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
+            <button class="boton-oculto navbar-toggler" type="button" data-bs-toggle="collapse"
+                data-bs-target="#navegacion" aria-controls="navegacion" aria-expanded="false"
+                aria-label="Toggle navigation">
+                <span class="boton-oculto navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navegacion">
                 <ul class="navbar-nav ms-auto">
@@ -42,9 +43,13 @@
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
                             <li>
-                                <RouterLink class="dropdown-item" to="/datospersonales">Datos personales</RouterLink>
+                                <RouterLink class="dropdown-item" to="/datos-personales">Datos personales</RouterLink>
                             </li>
-                            <li><a class="dropdown-item btn btn-primary" @click="cerrarSesion">Cerrar Sesión</a></li>
+                            <li>
+                                <a class="dropdown-item btn" data-bs-toggle="modal"
+                                    data-bs-target="#modalCambiarContrasena">Cambiar Contraseña</a>
+                            </li>
+                            <li><a class="dropdown-item btn" @click="cerrarSesion">Cerrar Sesión</a></li>
                         </ul>
                     </li>
                     <li class="nav-item">
@@ -55,9 +60,52 @@
             </div>
         </div>
     </nav>
+
+    <!-- Modal Cambiar Contraseña -->
+    <div class="modal fade" id="modalCambiarContrasena" tabindex="-1" aria-labelledby="modalCambiarContrasenaLabel"
+        aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalCambiarContrasenaLabel">Cambiar Contraseña</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <form @submit.prevent="cambiarContrasena">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="actual" class="form-label">Contraseña actual</label>
+                            <input v-model="formContrasena.actual" type="password" id="actual" class="form-control"
+                                required />
+                        </div>
+                        <div class="mb-3">
+                            <label for="nueva" class="form-label">Nueva contraseña</label>
+                            <input v-model="formContrasena.nueva" type="password" id="nueva" class="form-control"
+                                required />
+                        </div>
+                        <div class="mb-3">
+                            <label for="confirmar" class="form-label">Confirmar nueva contraseña</label>
+                            <input v-model="formContrasena.confirmar" type="password" id="confirmar"
+                                class="form-control" required />
+                        </div>
+                        <div v-if="errorContrasena" class="alert alert-danger">{{ errorContrasena }}</div>
+                        <div v-if="exitoContrasena" class="alert alert-success">Contraseña cambiada correctamente.</div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" :disabled="cargandoContrasena">
+                            <span v-if="cargandoContrasena" class="spinner-border spinner-border-sm me-2" role="status"
+                                aria-hidden="true"></span>
+                            Guardar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 </template>
 
 <script setup lang="ts">
+import urlBackend from '@/rutaApi';
 import { jwtDecode } from 'jwt-decode';
 import { ref, onMounted } from 'vue';
 import { RouterLink, useRouter } from 'vue-router';
@@ -68,7 +116,7 @@ const nombreCompleto = ref("");
 
 onMounted(() => {
     rolToken.value = jwtDecode<any>(localStorage.getItem("token") || "").roles[0];
-    nombreCompleto.value = jwtDecode<any>(localStorage.getItem("token") || "").username + " " +
+    nombreCompleto.value = jwtDecode<any>(localStorage.getItem("token") || "Usuario").username + " " +
         jwtDecode<any>(localStorage.getItem("token") || "").apellido;
 });
 
@@ -76,14 +124,54 @@ const cerrarSesion = () => {
     localStorage.removeItem("token");
     router.push("/login");
 };
+
+const formContrasena = ref({
+    actual: "",
+    nueva: "",
+    confirmar: ""
+});
+
+const errorContrasena = ref("");
+const exitoContrasena = ref(false);
+const cargandoContrasena = ref(false);
+
+const cambiarContrasena = async () => {
+    errorContrasena.value = '';
+    exitoContrasena.value = false;
+    cargandoContrasena.value = true;
+    if (formContrasena.value.nueva !== formContrasena.value.confirmar) {
+        errorContrasena.value = 'La nueva contraseña y la confirmación no coinciden.';
+        cargandoContrasena.value = false;
+        return;
+    }
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(urlBackend + '/api/usuarios/cambiarContrasena', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                token,
+                actual: formContrasena.value.actual,
+                nueva: formContrasena.value.nueva
+            })
+        });
+        const data = await response.json();
+        if (data.error) {
+            errorContrasena.value = data.error;
+        } else {
+            exitoContrasena.value = true;
+            formContrasena.value = { actual: '', nueva: '', confirmar: '' };
+        }
+    } catch (e) {
+        errorContrasena.value = 'Error al cambiar la contraseña.';
+    } finally {
+        cargandoContrasena.value = false;
+    }
+};
 </script>
 
-<style scoped>
-.navbar-toggler {
-    border-color: #fff !important;
-}
-
-.navbar-toggler-icon {
-    background-image: url("data:image/svg+xml;charset=utf8,%3Csvg viewBox='0 0 30 30' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath stroke='rgba(255,255,255,1)' stroke-width='2' stroke-linecap='round' stroke-miterlimit='10' d='M4 7h22M4 15h22M4 23h22'/%3E%3C/svg%3E") !important;
+<style>
+.boton-oculto {
+    background-color: white !important;
 }
 </style>
