@@ -12,10 +12,15 @@
                 No tienes compras registradas
             </div>
 
-            <div v-else>
-                <div v-for="(compra, index) in compras" :key="index">
-                    <div :id="'id:' + index" class="card mb-1 bg-light text-dark">
+            <div v-else id="purchase-history-section">
+                <div v-for="(compra, index) in paginatedCompras" :key="index">
+                    <div :id="'id:' + (index + (currentPage - 1) * comprasPerPage)"
+                        class="card mb-1 bg-light text-dark">
                         <div class="card-header">
+                            <strong>Usuario:</strong> {{ compra.usuario }}
+                            <br />
+                            <strong>Transacción:</strong> {{ compra.transaccion_id }}
+                            <br />
                             <strong>Fecha de compra:</strong> {{ compra.fecha }}
                             <br />
                             <strong>Total:</strong> {{ formatPrice(compra.precio_total) }} €
@@ -41,10 +46,27 @@
                             </ul>
                         </div>
                     </div>
-                    <button class="btn btn-primary my-2" @click="descargarFactura(compra, index)">
+                    <button class="btn btn-primary my-2"
+                        @click="descargarFactura(compra, index + (currentPage - 1) * comprasPerPage)">
                         Descargar Factura
                     </button>
                 </div>
+
+                <nav v-if="totalPages > 1">
+                    <ul class="pagination justify-content-center mt-4">
+                        <li class="page-item me-2" :class="{ disabled: currentPage === 1 }">
+                            <button class="btn btn-primary" @click="prevPage"
+                                :disabled="currentPage === 1">Anterior</button>
+                        </li>
+                        <li class="page-item mx-2 d-flex align-items-center text-white">
+                            Página {{ currentPage }}
+                        </li>
+                        <li class="page-item ms-2" :class="{ disabled: currentPage === totalPages }">
+                            <button class="btn btn-primary" @click="nextPage"
+                                :disabled="currentPage === totalPages">Siguiente</button>
+                        </li>
+                    </ul>
+                </nav>
             </div>
         </div>
         <ScrollBotonComponent />
@@ -53,7 +75,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, nextTick } from 'vue';
+import { ref, onMounted, computed, nextTick } from 'vue';
 // @ts-ignore
 import html2pdf from 'html2pdf.js';
 import urlBackend from '@/rutaApi';
@@ -69,6 +91,8 @@ interface DetalleCompra {
 }
 
 interface Compra {
+    usuario: string;
+    transaccion_id: string;
     fecha: string;
     precio_total: number;
     detalles: DetalleCompra[];
@@ -76,6 +100,47 @@ interface Compra {
 
 const compras = ref<Compra[]>([]);
 const cargando = ref(false);
+
+// Pagination specific variables
+const currentPage = ref(1);
+const comprasPerPage = 5; // You can adjust this number
+
+// Computed property for paginated purchases
+const paginatedCompras = computed(() => {
+    const start = (currentPage.value - 1) * comprasPerPage;
+    const end = start + comprasPerPage;
+    return compras.value.slice(start, end);
+});
+
+// Computed property for total pages
+const totalPages = computed(() => {
+    return Math.ceil(compras.value.length / comprasPerPage);
+});
+
+// Function to scroll to the purchase history section
+const scrollToPurchaseHistory = async () => {
+    await nextTick(); // Ensure DOM is updated before scrolling
+    const purchaseHistorySection = document.getElementById('purchase-history-section');
+    if (purchaseHistorySection) {
+        purchaseHistorySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+};
+
+// Function for previous page
+const prevPage = () => {
+    if (currentPage.value > 1) {
+        currentPage.value--;
+        scrollToPurchaseHistory();
+    }
+};
+
+// Function for next page
+const nextPage = () => {
+    if (currentPage.value < totalPages.value) {
+        currentPage.value++;
+        scrollToPurchaseHistory();
+    }
+};
 
 const formatPrice = (price: number): string => {
     if (typeof price !== 'number') {
@@ -109,6 +174,7 @@ const fetchCompras = async () => {
 
         const data = await response.json();
         compras.value = data || [];
+        currentPage.value = 1; // Reset to first page after fetching new data
     } catch (e) {
         console.error(e);
         compras.value = [];
@@ -117,14 +183,18 @@ const fetchCompras = async () => {
     }
 };
 
-const descargarFactura = async (compra: Compra, index: number) => {
+const descargarFactura = async (compra: Compra, originalIndex: number) => {
     await nextTick();
-    const el = document.getElementById(`id:${index}`);
-    if (!el) return;
+    // Use the original index calculated for the full `compras` array
+    const el = document.getElementById(`id:${originalIndex}`);
+    if (!el) {
+        console.error(`Element with ID id:${originalIndex} not found.`);
+        return;
+    }
 
     const opt = {
         margin: 0.5,
-        filename: `factura_${compra.fecha.replace(/[: ]/g, '_')}.pdf`,
+        filename: `factura_${localStorage.getItem('username')}_${compra.fecha.replace(/[: ]/g, '_')}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2 },
         jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' },
@@ -137,3 +207,11 @@ onMounted(() => {
     fetchCompras();
 });
 </script>
+
+<style scoped>
+/* Add any specific styles here if needed */
+.text-white .pagination .page-item .text-white {
+    color: white !important;
+    /* Ensures the page text remains white */
+}
+</style>

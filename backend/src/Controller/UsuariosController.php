@@ -280,7 +280,7 @@ final class UsuariosController extends AbstractController
         $carrito = $usuario->getCarrito() ?? [];
         $result = [];
         foreach ($carrito as $item) {
-            $videojuego = $em->getRepository(Videojuegos::class)->find($item['videojuego_id']);
+            $videojuego = $em->getRepository(Videojuegos::class)->findOneBy(["id" => $item['videojuego_id'], "deleted" => false]);
             if ($videojuego) {
                 $result[] = [
                     'videojuego_id' => $item['videojuego_id'],

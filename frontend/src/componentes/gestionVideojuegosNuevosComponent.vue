@@ -11,6 +11,13 @@
             </button>
             <button v-if="busqueda" class="btn btn-danger ms-2" type="button" @click="limpiarBusqueda">Limpiar</button>
         </form>
+
+        <div v-if="showSuccessMessage"
+            class="alert alert-success text-center position-fixed top-50 start-50 translate-middle"
+            style="z-index: 1050; width: auto; white-space: nowrap;">
+            ¡Videojuego insertado correctamente!
+        </div>
+
         <div v-if="cargando" class="text-center my-5">
             <span class="spinner-border"></span>
         </div>
@@ -69,8 +76,13 @@
                             <div v-if="errores[juego.id]" class="alert alert-danger py-2 mb-2">{{ errores[juego.id] }}
                             </div>
                             <button class="btn btn-primary mt-auto"
-                                @click="anadirJuego(juego, plataformasSeleccionadas[juego.id], precios[juego.id], stocks[juego.id])">Añadir
-                                a mi web</button>
+                                @click="anadirJuego(juego, plataformasSeleccionadas[juego.id], precios[juego.id], stocks[juego.id])"
+                                :disabled="isAddingGame[juego.id]">
+                                <span v-if="isAddingGame[juego.id]" class="spinner-border spinner-border-sm me-2"
+                                    role="status" aria-hidden="true"></span>
+                                <span v-if="isAddingGame[juego.id]">Añadiendo ...</span>
+                                <span v-else>Añadir a mi web</span>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -108,6 +120,10 @@ const stocks = ref<{ [key: number]: number }>({});
 const errores = ref<{ [key: number]: string }>({});
 const router = useRouter();
 
+// Nuevas variables reactivas
+const showSuccessMessage = ref(false);
+const isAddingGame = ref<{ [key: number]: boolean }>({}); // To manage loading state per game button
+
 const fetchJuegos = async () => {
     cargando.value = true;
     try {
@@ -120,7 +136,8 @@ const fetchJuegos = async () => {
         juegos.value = data.results;
         siguienteHabilitado.value = (data.results && data.results.length === pageSize);
         indicesCarrusel.value = {};
-        // Inicializa la plataforma seleccionada por defecto para cada juego
+        // Initialize isAddingGame for each new game
+        isAddingGame.value = {}; // Reset for new search results
         await nextTick();
         juegos.value.forEach(juego => {
             if (juego.platforms && juego.platforms.length) {
@@ -128,6 +145,7 @@ const fetchJuegos = async () => {
             } else {
                 plataformasSeleccionadas.value[juego.id] = '';
             }
+            isAddingGame.value[juego.id] = false; // Initialize to false
         });
     } catch (e) {
         juegos.value = [];
@@ -158,6 +176,10 @@ const limpiarBusqueda = () => {
 
 watch(pagina, () => {
     fetchJuegos();
+    window.scrollTo({
+        top: 0,
+        behavior: 'smooth' // Optional: for a smooth scrolling animation
+    });
 });
 
 onMounted(fetchJuegos);
@@ -173,6 +195,10 @@ const anadirJuego = async (juego: any, plataformaSeleccionada?: string, precio?:
         errores.value[juego.id] = 'El stock debe ser un número entero mayor o igual que 0.';
         return;
     }
+
+    // Set loading state for this specific game's button
+    isAddingGame.value[juego.id] = true;
+
     try {
         const token = localStorage.getItem("token");
         if (!token) {
@@ -202,12 +228,18 @@ const anadirJuego = async (juego: any, plataformaSeleccionada?: string, precio?:
             })
         });
         if (response.ok) {
-            alert('¡Videojuego añadido a tu web!');
+            showSuccessMessage.value = true;
+            setTimeout(() => {
+                showSuccessMessage.value = false;
+            }, 3000); // Hide after 3 seconds
         } else {
-            alert('Error al añadir el videojuego.');
+            const errorData = await response.json(); // Try to read error message from backend
+            errores.value[juego.id] = errorData.message || 'Error al añadir el videojuego.';
         }
     } catch (e) {
-        alert('Error de red o servidor.');
+        errores.value[juego.id] = 'Error de red o servidor.';
+    } finally {
+        isAddingGame.value[juego.id] = false; // Always re-enable the button
     }
 };
 </script>

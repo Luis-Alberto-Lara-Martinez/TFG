@@ -8,7 +8,7 @@
         <div v-else>
             <div v-if="carrito.length === 0" class="alert alert-info text-center">Tu carrito está vacío.</div>
             <div v-else class="table-responsive">
-                <table class="table table-striped">
+                <table class="table table-striped text-center">
                     <thead>
                         <tr>
                             <th>Producto</th>
@@ -32,12 +32,15 @@
                             </td>
                         </tr>
                         <tr>
-                            <td class="text-end fw-bold" colspan="6">Total: {{ formatPrice(totalCarrito) }} €</td>
+                            <td colspan="3"></td>
+                            <td class="fw-bold">Total:</td>
+                            <td class="fw-bold">{{ formatPrice(totalCarrito) }} €</td>
+                            <td></td>
                         </tr>
                     </tbody>
                 </table>
             </div>
-            <PaypalComponent :total="totalCarrito" />
+            <PaypalComponent :total="totalCarrito" :carrito-items="carrito" @payment-success="handlePaymentSuccess" />
         </div>
         <ScrollBotonComponent />
     </div>
@@ -50,7 +53,6 @@ import urlBackend from '@/rutaApi';
 import MenuComponent from './menuComponent.vue';
 import ScrollBotonComponent from './scrollBotonComponent.vue';
 import PiePaginaComponent from './piePaginaComponent.vue';
-import { loadScript } from '@paypal/paypal-js';
 import PaypalComponent from './paypalComponent.vue';
 
 // todovideojuegosdev@personal.example.com
@@ -103,9 +105,17 @@ const eliminarDelCarrito = async (videojuegoId: number) => {
             await fetchCarrito();
         }
     } catch (e) {
-
+        // Handle error
     }
 };
+
+// NEW: Function to handle payment success from PaypalComponent
+const handlePaymentSuccess = async () => {
+    // After a successful payment, clear the local cart and refresh from the backend
+    carrito.value = []; // Clear immediately for UI feedback
+    await fetchCarrito(); // Re-fetch to ensure sync with backend (which should now be empty)
+};
+
 
 onMounted(() => {
     fetchCarrito();

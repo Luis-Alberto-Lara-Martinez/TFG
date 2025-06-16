@@ -421,14 +421,14 @@ final class VideojuegosController extends AbstractController
         if (!$videojuego) {
             return new JsonResponse(['error' => 'Videojuego no encontrado'], 404);
         }
-        $resenas = $videojuego->getReviews(); // Asumiendo relación getResenas()
+        $resenas = $em->getRepository(Reviews::class)->findBy(["videojuego" => $videojuego], ["created_at" => "DESC"]); // Asumiendo relación getResenas()
         $result = [];
         foreach ($resenas as $resena) {
             $result[] = [
                 'usuario' => $resena->getUsuario()->getNombre() . " " . $resena->getUsuario()->getApellido(),
                 'comentario' => $resena->getComentario(),
                 'nota' => $resena->getNota(),
-                'fecha' => $resena->getCreatedAt()->format("d/m/Y h:i:s")
+                'fecha' => $resena->getCreatedAt()->format("d/m/Y H:i:s")
             ];
         }
         return new JsonResponse($result);
@@ -440,9 +440,9 @@ final class VideojuegosController extends AbstractController
         $data = json_decode($request->getContent(), true);
         $token = $data['token'] ?? null;
         $productoId = $data['videojuego_id'] ?? null;
-        $comentario = $data['comentario'] ?? '';
+        $comentario = $data['comentario'] == "" ? null : $data['comentario'];
         $puntuacion = $data['nota'] ?? null;
-        if (!$token || !$productoId || !$comentario || !$puntuacion) {
+        if (!$token || !$productoId || !$puntuacion) {
             return new JsonResponse(['error' => 'Faltan datos'], 400);
         }
         try {
@@ -511,7 +511,7 @@ final class VideojuegosController extends AbstractController
                 'id' => $videojuego->getId(),
                 'nombre' => $videojuego->getNombre(),
                 'deleted' => $videojuego->isDeleted(),
-                'nota_media'=>$videojuego->getNotaMedia(),
+                'nota_media' => $videojuego->getNotaMedia(),
                 'precio' => $videojuego->getPrecio(),
                 'fecha_lanzamiento' => $videojuego->getFechaLanzamiento()->format('d/m/Y'),
                 'stock' => $videojuego->getStock(),

@@ -1,3 +1,4 @@
+// paypalComponent.vue
 <template>
     <div ref="paypalButtonContainer"></div>
 </template>
@@ -9,6 +10,7 @@ import urlBackend from '@/rutaApi'; // Assuming you have this for backend commun
 
 const props = defineProps<{
     total: number;
+    carritoItems: any[]; // NEW PROP: Accept the full cart array
 }>();
 
 const paypalButtonContainer = ref<HTMLElement | null>(null);
@@ -22,6 +24,11 @@ const loadPaypalScript = async () => {
         });
 
         if (paypal && paypal.Buttons && paypalButtonContainer.value) {
+            // Clear existing buttons before rendering new ones if the total changes
+            if (paypalButtonContainer.value.hasChildNodes()) {
+                paypalButtonContainer.value.innerHTML = '';
+            }
+
             await paypal.Buttons({
                 createOrder: (data: any, actions: any) => {
                     return actions.order.create({
@@ -29,7 +36,16 @@ const loadPaypalScript = async () => {
                             amount: {
                                 value: props.total.toFixed(2), // Ensure two decimal places
                                 currency_code: "EUR"
-                            }
+                            },
+                            // Optionally, you can add item breakdown here for PayPal's view
+                            // items: props.carritoItems.map(item => ({
+                            //     name: item.nombre,
+                            //     quantity: item.cantidad.toString(),
+                            //     unit_amount: {
+                            //         currency_code: "EUR",
+                            //         value: item.precio.toFixed(2)
+                            //     }
+                            // }))
                         }]
                     });
                 },
@@ -37,28 +53,28 @@ const loadPaypalScript = async () => {
                     const order = await actions.order.capture();
                     console.log('Pago completado:', order);
 
-                    // You might want to send a request to your backend to verify the payment
-                    // and update the order status in your database.
                     try {
                         const token = localStorage.getItem('token');
-                        const response = await fetch(urlBackend + '/api/pedidos/crearPedido', {
+                        const response = await fetch(urlBackend + '/api/compras/crear', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
                                 token,
-                                orderId: order.id,
-                                status: order.status,
-                                total: props.total
+                                transaccion_id: order.id,
+                                precio_total: props.total,
+                                // NEW: Pass the full cart items to the backend
+                                videojuegos: props.carritoItems.map(item => ({
+                                    videojuego_id: item.videojuego_id,
+                                    cantidad: item.cantidad,
+                                    precio_unitario: item.precio, // It's good to also send the price at the time of purchase
+                                    // You might also want to send:
+                                    // nombre: item.nombre,
+                                    // plataforma: item.plataforma
+                                }))
                             })
                         });
                         const backendResponse = await response.json();
-                        if (backendResponse.success) {
-                            alert('¡Pago exitoso y pedido registrado!');
-                            // Optionally, clear the cart or redirect the user
-                            // window.location.reload(); // Or emit an event to parent to refresh cart
-                        } else {
-                            alert('Pago exitoso, pero hubo un problema al registrar el pedido en el sistema.');
-                        }
+                        emit('payment-success');
                     } catch (error) {
                         console.error('Error al comunicar con el backend:', error);
                         alert('Pago exitoso, pero hubo un error de comunicación con el servidor.');
@@ -76,18 +92,28 @@ const loadPaypalScript = async () => {
     }
 };
 
+// Define emits
+const emit = defineEmits(['payment-success']);
+
 onMounted(() => {
-    if (props.total > 0) {
+    if (props.total > 0 && props.carritoItems.length > 0) { // Also check if there are items
         loadPaypalScript();
     }
 });
 
-watch(() => props.total, (newTotal) => {
-    if (newTotal > 0 && !paypalLoaded.value) {
+watch([() => props.total, () => props.carritoItems], ([newTotal, newItems]) => {
+    // Re-render PayPal button if total or items change significantly
+    if (newTotal > 0 && newItems.length > 0) {
+        // To properly re-render the PayPal button, you often need to destroy the old instance
+        // before rendering a new one. This often involves clearing the container.
+        // The `loadPaypalScript` function now includes logic to clear the container.
         loadPaypalScript();
+    } else if (newTotal === 0 || newItems.length === 0) {
+        // If cart becomes empty, clear the PayPal button
+        if (paypalButtonContainer.value) {
+            paypalButtonContainer.value.innerHTML = '';
+        }
+        paypalLoaded.value = false;
     }
-    // If the total changes after initial load and you want to re-render the button
-    // you might need to destroy the old button and re-render a new one.
-    // For simplicity, this example reloads only if not loaded initially.
-});
+}, { deep: true }); // Use deep watch for carritoItems
 </script>

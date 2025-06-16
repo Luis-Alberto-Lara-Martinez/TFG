@@ -5,6 +5,7 @@ namespace App\Entity;
 use App\Repository\ComprasRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: ComprasRepository::class)]
@@ -30,6 +31,9 @@ class Compras
      */
     #[ORM\OneToMany(targetEntity: DetallesCompra::class, mappedBy: 'compra')]
     private Collection $detallesCompras;
+
+    #[ORM\Column(type: Types::TEXT)]
+    private ?string $transaccion_id = null;
 
     public function __construct()
     {
@@ -103,6 +107,18 @@ class Compras
                 $detallesCompra->setCompra(null);
             }
         }
+
+        return $this;
+    }
+
+    public function getTransaccionId(): ?string
+    {
+        return $this->transaccion_id;
+    }
+
+    public function setTransaccionId(string $transaccion_id): static
+    {
+        $this->transaccion_id = $transaccion_id;
 
         return $this;
     }

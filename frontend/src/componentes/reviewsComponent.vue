@@ -3,7 +3,6 @@
   <div class="container my-5 text-white">
     <h3 class="mb-3">Reseñas de Videojuegos</h3>
 
-    <!-- Selector de productos -->
     <div class="mb-4">
       <select class="form-select" v-model="productoId" @change="onProductoSeleccionado">
         <option value="0" disabled>Selecciona un videojuego</option>
@@ -13,29 +12,7 @@
       </select>
     </div>
 
-    <!-- Reseñas -->
-    <div v-if="productoId != 0">
-      <div v-if="reseñas.length === 0" class="alert alert-info">
-        No hay reseñas para este videojuego.
-      </div>
-      <div v-else>
-        <div v-for="resena in reseñas" :key="resena.id" class="card mb-3">
-          <div class="card-body">
-            <h5 class="card-title mb-1">{{ resena.usuario }}</h5>
-            <span>{{ resena.fecha }}</span>
-            <p class="card-text mb-1">{{ resena.comentario }}</p>
-            <div class="text-warning">
-              <span v-for="n in 5" :key="n">
-                <i class="fa-star" :class="n <= resena.nota ? 'fas' : 'far'"></i>
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Añadir Reseña -->
-    <div class="card mt-4" v-if="productoId">
+    <div class="card mt-4 mb-3" v-if="productoId">
       <div class="card-body">
         <h5 class="card-title">Deja tu reseña</h5>
         <div v-if="mensajeError" class="alert alert-danger">
@@ -52,9 +29,46 @@
           </div>
         </div>
 
-        <button class="btn btn-primary mt-2" @click="enviarResena">
-          Enviar
+        <button class="btn btn-primary mt-2" @click="enviarResena" :disabled="isLoading">
+          <span v-if="isLoading" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+          <span v-if="isLoading">Enviando...</span>
+          <span v-else>Enviar</span>
         </button>
+      </div>
+    </div>
+
+    <div v-if="productoId != 0">
+      <div v-if="paginatedResenas.length === 0 && reseñas.length === 0" class="alert alert-info">
+        No hay reseñas para este videojuego.
+      </div>
+      <div v-else id="reviews-section">
+        <div v-for="resena in paginatedResenas" :key="resena.id" class="card mb-3">
+          <div class="card-body">
+            <h5 class="card-title mb-1">{{ resena.usuario }}</h5>
+            <span>{{ resena.fecha }}</span>
+            <p class="card-text mb-1">{{ resena.comentario }}</p>
+            <div class="text-warning">
+              <span v-for="n in 5" :key="n">
+                <i class="fa-star" :class="n <= resena.nota ? 'fas' : 'far'"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <nav v-if="totalPages > 1">
+          <ul class="pagination justify-content-center">
+            <li class="page-item me-2" :class="{ disabled: currentPage === 1 }">
+              <button class="btn btn-primary" @click="prevPage" :disabled="currentPage === 1">Anterior</button>
+            </li>
+            <li class="page-item mx-2 d-flex align-items-center">
+              Página {{ currentPage }}
+            </li>
+            <li class="page-item ms-2" :class="{ disabled: currentPage === totalPages }">
+              <button class="btn btn-primary" @click="nextPage"
+                :disabled="currentPage === totalPages">Siguiente</button>
+            </li>
+          </ul>
+        </nav>
       </div>
     </div>
     <ScrollBotonComponent />
@@ -63,7 +77,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed, nextTick } from 'vue'; // Import nextTick
 import urlBackend from '@/rutaApi';
 import MenuComponent from './menuComponent.vue';
 import ScrollBotonComponent from './scrollBotonComponent.vue';
@@ -75,6 +89,48 @@ const productoId = ref<number>(0);
 const nuevoComentario = ref('');
 const nuevaPuntuacion = ref(5);
 const mensajeError = ref('');
+const isLoading = ref(false);
+
+// Pagination specific variables
+const currentPage = ref(1);
+const reviewsPerPage = 5;
+
+// Computed property for paginated reviews
+const paginatedResenas = computed(() => {
+  const start = (currentPage.value - 1) * reviewsPerPage;
+  const end = start + reviewsPerPage;
+  return reseñas.value.slice(start, end);
+});
+
+// Computed property for total pages
+const totalPages = computed(() => {
+  return Math.ceil(reseñas.value.length / reviewsPerPage);
+});
+
+// Function to scroll to the reviews section
+const scrollToReviews = async () => {
+  await nextTick(); // Ensure DOM is updated before scrolling
+  const reviewsSection = document.getElementById('reviews-section');
+  if (reviewsSection) {
+    reviewsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+};
+
+// Function for previous page
+const prevPage = () => {
+  if (currentPage.value > 1) {
+    currentPage.value--;
+    scrollToReviews();
+  }
+};
+
+// Function for next page
+const nextPage = () => {
+  if (currentPage.value < totalPages.value) {
+    currentPage.value++;
+    scrollToReviews();
+  }
+};
 
 // Cargar todos los productos al iniciar
 const cargarProductos = async () => {
@@ -94,6 +150,7 @@ const cargarProductos = async () => {
 
 // Cuando el usuario selecciona un producto
 const onProductoSeleccionado = () => {
+  currentPage.value = 1; // Reset to first page on new product selection
   if (productoId.value) {
     fetchResenas(productoId.value);
   } else {
@@ -112,7 +169,6 @@ const fetchResenas = async (id: number) => {
     });
     const data = await response.json();
     reseñas.value = data || [];
-    console.log(data);
   } catch (e) {
     reseñas.value = [];
   }
@@ -126,6 +182,7 @@ const enviarResena = async () => {
     return;
   }
 
+  isLoading.value = true;
   try {
     const token = localStorage.getItem('token');
     const response = await fetch(urlBackend + '/api/videojuegos/crearReview', {
@@ -139,11 +196,19 @@ const enviarResena = async () => {
       })
     });
     const data = await response.json();
-    fetchResenas(productoId.value);
-    nuevoComentario.value = '';
-    nuevaPuntuacion.value = 5;
+    if (response.ok) {
+      fetchResenas(productoId.value);
+      nuevoComentario.value = '';
+      nuevaPuntuacion.value = 5;
+      currentPage.value = 1; // Go to first page after submitting a new review
+      scrollToReviews(); // Scroll to top after submitting
+    } else {
+      mensajeError.value = data.message || 'Error al enviar la reseña.';
+    }
   } catch (e) {
     mensajeError.value = 'Error al enviar la reseña.';
+  } finally {
+    isLoading.value = false;
   }
 };
 
@@ -153,6 +218,4 @@ onMounted(() => {
 });
 </script>
 
-<style>
-@import 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css';
-</style>
+<style scoped></style>
