@@ -71,6 +71,9 @@ class Videojuegos
     #[ORM\Column]
     private ?int $stock = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?float $nota_media = null;
+
     public function __construct()
     {
         $this->imagenes = new ArrayCollection();
@@ -314,6 +317,18 @@ class Videojuegos
     public function setStock(int $stock): static
     {
         $this->stock = $stock;
+
+        return $this;
+    }
+
+    public function getNotaMedia(): ?float
+    {
+        return $this->nota_media;
+    }
+
+    public function setNotaMedia(?float $nota_media): static
+    {
+        $this->nota_media = $nota_media;
 
         return $this;
     }

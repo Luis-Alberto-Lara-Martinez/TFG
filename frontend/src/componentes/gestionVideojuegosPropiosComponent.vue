@@ -33,6 +33,15 @@
                         </div>
                         <div class="card-body d-flex flex-column text-dark">
                             <h5 class="card-title">{{ juego.nombre }}</h5>
+                            <p class="card-text mb-2"><strong>Plataforma: </strong>
+                                <span>{{ juego.plataforma }}</span>
+                            </p>
+                            <p class="card-text mb-2"><strong>Nota media: </strong>
+                                <span v-if="juego.nota_media">{{ formatPrice(juego.nota_media) }}
+                                    <i class="fa-solid fa-star text-warning"></i>
+                                </span>
+                                <span v-else>Sin nota</span>
+                            </p>
                             <p class="card-text mb-2"><strong>Precio: </strong>
                                 <span v-if="editandoId !== juego.id">{{ formatPrice(juego.precio) }} €</span>
                                 <input v-else type="number" min="0" step="0.01"
@@ -79,7 +88,7 @@
                             </div>
                             <div v-if="errores[juego.id] && editandoId === juego.id"
                                 class="alert alert-danger py-2 mb-2">{{
-                                    errores[juego.id] }}</div>
+                                errores[juego.id] }}</div>
                         </div>
                     </div>
                 </div>
@@ -146,7 +155,7 @@ const fetchVideojuegos = async () => {
     cargando.value = true;
     try {
         const token = localStorage.getItem('token');
-        const response = await fetch(urlBackend + '/api/videojuegos/listarVideojuegos', {
+        const response = await fetch(urlBackend + '/api/videojuegos/listarVideojuegosAdmin', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ token })

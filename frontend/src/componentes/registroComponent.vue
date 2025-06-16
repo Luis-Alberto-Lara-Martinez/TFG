@@ -34,7 +34,9 @@
                     </div>
                     <div class="mb-3">
                         <label for="direccion" class="form-label">Dirección <span class="text-danger">*</span></label>
-                        <input v-model="direccion" type="text" id="direccion" class="form-control" required />
+                        <input v-model="direccion" type="text" id="direccion" class="form-control"
+                            placeholder="Debe empezar por Calle/Plaza/Avenida"
+                            pattern="^(Calle|Plaza|Avenida|calle|plaza|avenida)[\s0-9a-záéíóúñA-ZÁÉÍÓÚÑ]+$" required />
                     </div>
                     <div v-if="error" class="mb-3">
                         <div class="alert alert-danger">{{ error }}</div>

@@ -32,7 +32,7 @@ final class ComprasController extends AbstractController
         if (!$usuario) {
             return new JsonResponse(['error' => 'Usuario no encontrado'], 404);
         }
-        $compras = $em->getRepository(Compras::class)->findBy(["usuario" => $usuario->getId()]);
+        $compras = $em->getRepository(Compras::class)->findBy(["usuario" => $usuario->getId()], ['fecha' => 'DESC']);
         $result = [];
         foreach ($compras as $compra) {
             $detalles = [];

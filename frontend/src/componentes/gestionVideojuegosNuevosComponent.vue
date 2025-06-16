@@ -45,8 +45,6 @@
                         </div>
                         <div class="card-body d-flex flex-column text-dark">
                             <h5 class="card-title">{{ juego.name }}</h5>
-                            <p class="card-text mb-2"><strong>Fecha de lanzamiento:</strong> {{ juego.released }}</p>
-                            <p class="card-text mb-2"><strong>Rating:</strong> {{ juego.rating }}</p>
                             <div class="mb-2">
                                 <label class="form-label mb-1">Plataformas:</label>
                                 <select class="form-select" v-if="juego.platforms && juego.platforms.length"
@@ -187,23 +185,20 @@ const anadirJuego = async (juego: any, plataformaSeleccionada?: string, precio?:
             portada: img.id === -1
         }));
         const generos = (juego.genres || []).map((g: { name: string }) => g.name);
-        const response = await fetch(urlBackend + '/api/videojuegos', {
+        const response = await fetch(urlBackend + '/api/videojuegos/crear', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify({
+                token: token,
                 nombre: juego.name,
-                imagen: juego.background_image,
-                fecha_lanzamiento: juego.released,
-                rating: juego.rating,
-                rawg_id: juego.id,
-                plataforma: plataformaSeleccionada || null,
                 precio: precio,
+                fecha_lanzamiento: juego.released,
                 stock: stock,
                 imagenes,
-                generos
+                categorias: generos,
+                plataforma: plataformaSeleccionada,
             })
         });
         if (response.ok) {

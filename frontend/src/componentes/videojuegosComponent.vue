@@ -2,22 +2,19 @@
     <MenuComponent />
     <div class="container my-5 text-white">
         <h2 class="mb-4 text-center">Listado de Videojuegos</h2>
-        <!-- Panel de búsqueda y filtros -->
         <div class="card p-3 mb-4 bg-light text-dark">
             <div class="row g-2 align-items-end">
                 <div class="col-md-4">
                     <label class="form-label">Buscar por título</label>
-                    <input v-model="busquedaTitulo" @keyup.enter="buscarPorTitulo" type="text" class="form-control"
+                    <input v-model="busquedaTitulo" @keyup.enter="aplicarFiltros" type="text" class="form-control"
                         placeholder="Introduce el título...">
                 </div>
                 <div class="col-md-2">
                     <label class="form-label">Ordenar por</label>
                     <select v-model="ordenSeleccionado" class="form-select">
                         <option value="">Sin orden</option>
-                        <option value="precio_asc">Precio (ascendente)</option>
-                        <option value="precio_desc">Precio (descendente)</option>
-                        <option value="nombre_asc">Nombre (A-Z)</option>
-                        <option value="nombre_desc">Nombre (Z-A)</option>
+                        <option value="ASC">Precio (ascendente)</option>
+                        <option value="DESC">Precio (descendente)</option>
                     </select>
                 </div>
                 <div class="col-md-2">
@@ -36,8 +33,11 @@
                         </option>
                     </select>
                 </div>
-                <div class="col-md-2 d-grid">
-                    <button class="btn btn-primary mt-3" @click="aplicarFiltros">Buscar / Filtrar</button>
+                <div class="col-md-2">
+                    <button class="btn btn-success" @click="aplicarFiltros">
+                        <i class="fa-solid fa-magnifying-glass me-2"></i>
+                        <span>Buscar</span>
+                    </button>
                 </div>
             </div>
         </div>
@@ -76,8 +76,8 @@
                                 {{ formatPrice(juego.precio) }} €
                             </p>
                             <p class="card-text mb-2"><strong>Categorías: </strong>
-                                <span v-if="juego.generos && juego.generos.length">
-                                    {{ juego.generos.join(', ') }}
+                                <span v-if="juego.categorias && juego.categorias.length">
+                                    {{ juego.categorias.join(', ') }}
                                 </span>
                                 <span v-else>No especificadas</span>
                             </p>
@@ -87,9 +87,21 @@
                             <p class="card-text mb-2"><strong>Fecha de lanzamiento: </strong>
                                 <span>{{ juego.fecha_lanzamiento || 'No disponible' }}</span>
                             </p>
-                            <button class="btn btn-success mt-2" @click="anadirAlCarrito(juego.id)">Añadir al
-                                carrito</button>
-                            <button class="btn btn-info mt-2" @click="irAResenas(juego.id)">Ver reseñas</button>
+                            <p class="card-text mb-2"><strong>Nota media: </strong>
+                                <span v-if="juego.nota_media">{{ formatPrice(juego.nota_media) }}
+                                    <i class="fa-solid fa-star text-warning"></i>
+                                </span>
+                                <span v-else>Sin nota</span>
+                            </p>
+                            <p v-if="juego.stock < 10" class="card-text mb-3 mt-1 alert alert-warning">
+                                <strong>Quedan {{ juego.stock }} unidades disponibles</strong>
+                            </p>
+                            <button class="btn btn-success mt-auto" @click="insertarAlCarrito(juego.id)"
+                                :disabled="addingToCart[juego.id]">
+                                <span v-if="addingToCart[juego.id]" class="spinner-border spinner-border-sm"
+                                    role="status" aria-hidden="true"></span>
+                                <span v-else>Añadir al carrito</span>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -102,6 +114,13 @@
                     @click="pagina++; scrollArriba()">Siguiente</button>
             </div>
         </div>
+
+        <div v-if="showAlert"
+            :class="['alert', alertType, 'position-fixed', 'top-50', 'start-50', 'translate-middle-x']" role="alert"
+            style="z-index: 1050; min-width: 300px; max-width: 500px;">
+            {{ alertMessage }}
+        </div>
+
         <ScrollBotonComponent />
     </div>
     <PiePaginaComponent />
@@ -128,6 +147,59 @@ const videojuegosPaginados = computed(() => {
     return videojuegos.value.slice(start, start + porPagina);
 });
 
+const addingToCart = ref<{ [key: number]: boolean }>({}); // New: To track if a game is being added to cart
+const alertMessage = ref(''); // New: Message for the alert
+const showAlert = ref(false); // New: Visibility of the alert
+const alertType = ref(''); // New: Type of alert (success or danger)
+
+const insertarAlCarrito = async (id: number) => {
+    // Prevent multiple clicks for the same item
+    if (addingToCart.value[id]) {
+        return;
+    }
+
+    addingToCart.value[id] = true; // Set to true to disable button and show spinner
+    showAlert.value = false; // Hide any previous alerts
+
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(urlBackend + '/api/videojuegos/insertarAlCarrito', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                token,
+                videojuego_id: id,
+                cantidad: 1
+            })
+        });
+        const data = await response.json();
+
+        if (response.ok && !data.error) { // Check if response is successful (status 2xx) and no 'error' field
+            alertMessage.value = data.message || 'Videojuego añadido al carrito exitosamente.';
+            alertType.value = 'alert-success';
+        } else {
+            alertMessage.value = data.error || 'Hubo un error al añadir el videojuego al carrito.';
+            alertType.value = 'alert-danger';
+        }
+        showAlert.value = true;
+
+        // Automatically hide the alert after 3 seconds
+        setTimeout(() => {
+            showAlert.value = false;
+        }, 3000);
+
+    } catch (e) {
+        alertMessage.value = 'Error de conexión. No se pudo añadir el videojuego al carrito.';
+        alertType.value = 'alert-danger';
+        showAlert.value = true;
+        setTimeout(() => {
+            showAlert.value = false;
+        }, 3000);
+    } finally {
+        addingToCart.value[id] = false; // Re-enable the button
+    }
+};
+
 const fetchVideojuegos = async () => {
     cargando.value = true;
     try {
@@ -139,6 +211,7 @@ const fetchVideojuegos = async () => {
         });
         const data = await response.json();
         videojuegos.value = data || [];
+        console.log(data);
     } catch (e) {
         videojuegos.value = [];
     } finally {
@@ -168,24 +241,6 @@ const categoriaSeleccionada = ref('');
 const plataformas = ref<string[]>([]);
 const categorias = ref<string[]>([]);
 const resenasId = ref<number | null>(null);
-
-const buscarPorTitulo = async () => {
-    cargando.value = true;
-    try {
-        const token = localStorage.getItem('token');
-        const response = await fetch(urlBackend + '/api/videojuegos/buscarPorTitulo', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token, titulo: busquedaTitulo.value })
-        });
-        const data = await response.json();
-        videojuegos.value = data || [];
-    } catch (e) {
-        videojuegos.value = [];
-    } finally {
-        cargando.value = false;
-    }
-};
 
 const obtenerPlataformas = async () => {
     try {
@@ -217,16 +272,31 @@ const obtenerCategorias = async () => {
     }
 };
 
-const aplicarFiltros = () => {
-    pagina.value = 1;
-    let filtrados = [...videojuegos.value];
-    if (plataformaSeleccionada.value) {
-        filtrados = filtrados.filter(j => j.plataforma === plataformaSeleccionada.value);
+const aplicarFiltros = async () => {
+    // Se inicia la carga
+    cargando.value = true;
+    try {
+        const token = localStorage.getItem('token');
+        // ❗ CORRECCIÓN: Se apunta a la ruta correcta del controlador '/aplicarFiltros'
+        const response = await fetch(urlBackend + '/api/videojuegos/filtros', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                token,
+                titulo: busquedaTitulo.value.trim(),
+                orden: ordenSeleccionado.value,
+                categoria: categoriaSeleccionada.value,
+                plataforma: plataformaSeleccionada.value
+            })
+        });
+        const data = await response.json();
+        // ❗ CORRECCIÓN: El resultado se asigna a la variable 'videojuegos'
+        videojuegos.value = data || [];
+    } catch (e) {
+        videojuegos.value = [];
+    } finally {
+        cargando.value = false;
     }
-    if (categoriaSeleccionada.value) {
-        filtrados = filtrados.filter(j => (j.categorias || []).includes(categoriaSeleccionada.value));
-    }
-    videojuegos.value = filtrados;
 };
 
 const formatPrice = (price: number): string => {
@@ -239,14 +309,9 @@ const formatPrice = (price: number): string => {
     });
 };
 
-const irAResenas = (id: number) => {
-    router.push({ name: 'resenas', params: { productoId: id } });
-};
-
 function scrollArriba() {
     window.scrollTo({ top: 0, behavior: "instant" });
 }
-
 
 onMounted(() => {
     fetchVideojuegos();

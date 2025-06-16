@@ -6,7 +6,10 @@
             <span class="spinner-border"></span>
         </div>
         <div v-else>
-            <div v-if="error" class="alert alert-danger">{{ error }}</div>
+            <div v-if="error">
+                <p class="alert alert-danger">{{ error }}</p>
+                <button type="button" @click="error = ''" class="btn btn-primary">Volver a los usuarios</button>
+            </div>
             <div v-else>
                 <div class="table-responsive">
                     <table class="table table-bordered table-hover table-striped text-center">

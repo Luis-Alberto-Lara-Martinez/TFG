@@ -16,6 +16,9 @@
                         <RouterLink class="nav-link text-white" to="/videojuegos">Videojuegos</RouterLink>
                     </li>
                     <li>
+                        <RouterLink class="nav-link text-white" to="/reviews">Reseñas</RouterLink>
+                    </li>
+                    <li>
                         <RouterLink class="nav-link text-white" to="/historial-compras">Historial de compras
                         </RouterLink>
                     </li>

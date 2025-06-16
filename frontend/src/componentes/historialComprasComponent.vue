@@ -2,51 +2,65 @@
     <MenuComponent />
     <div class="container my-5 text-white">
         <h2 class="mb-4 text-center">Historial de Compras</h2>
+
         <div v-if="cargando" class="text-center my-5">
             <span class="spinner-border"></span>
         </div>
+
         <div v-else>
-            <div v-if="compras.length === 0" class="alert alert-info text-center">No tienes compras registradas.</div>
+            <div v-if="compras.length === 0" class="alert alert-info text-center">
+                No tienes compras registradas
+            </div>
+
             <div v-else>
-                <div v-for="(compra, index) in compras" :key="index" class="card mb-4 bg-light text-dark">
-                    <div class="card-header">
-                        <strong>Fecha de compra:</strong> {{ compra.fecha }}
-                        <br />
-                        <span class=""><strong>Total:</strong> {{ formatPrice(compra.precio_total) }} €</span>
+                <div v-for="(compra, index) in compras" :key="index">
+                    <div :id="'id:' + index" class="card mb-1 bg-light text-dark">
+                        <div class="card-header">
+                            <strong>Fecha de compra:</strong> {{ compra.fecha }}
+                            <br />
+                            <strong>Total:</strong> {{ formatPrice(compra.precio_total) }} €
+                            <br />
+                        </div>
+                        <div class="card-body">
+                            <h5 class="card-title">Detalles de la compra</h5>
+                            <ul class="list-group list-group-flush">
+                                <li v-for="(detalle, detalleIndex) in compra.detalles" :key="detalleIndex"
+                                    class="list-group-item bg-light">
+                                    <strong>{{ detalle.videojuego }}</strong>
+                                    <span> - {{ detalle.plataforma }}</span>
+                                    <br />
+                                    <span>Cantidad: {{ detalle.cantidad }}</span>
+                                    <br />
+                                    <span>Precio Unitario: {{ formatPrice(detalle.precio_unitario) }} €</span>
+                                    <br />
+                                    <span>
+                                        Total Videojuego:
+                                        {{ formatPrice(detalle.cantidad * detalle.precio_unitario) }} €
+                                    </span>
+                                </li>
+                            </ul>
+                        </div>
                     </div>
-                    <div class="card-body">
-                        <h5 class="card-title">Detalles de la compra</h5>
-                        <ul class="list-group list-group-flush">
-                            <li v-for="(detalle, detalleIndex) in compra.detalles" :key="detalleIndex"
-                                class="list-group-item bg-light">
-                                <strong>{{ detalle.videojuego }}</strong>
-                                <span> - {{ detalle.plataforma }}</span>
-                                <br />
-                                <span>Cantidad: {{ detalle.cantidad }}</span>
-                                <br />
-                                <span>Precio Unitario: {{ formatPrice(detalle.precio_unitario) }} €</span>
-                                <br />
-                                <span>Total Videojuego: {{ formatPrice(detalle.cantidad *
-                                    detalle.precio_unitario) }} €</span>
-                            </li>
-                        </ul>
-                    </div>
+                    <button class="btn btn-primary my-2" @click="descargarFactura(compra, index)">
+                        Descargar Factura
+                    </button>
                 </div>
             </div>
         </div>
+        <ScrollBotonComponent />
     </div>
     <PiePaginaComponent />
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, nextTick } from 'vue';
+// @ts-ignore
+import html2pdf from 'html2pdf.js';
 import urlBackend from '@/rutaApi';
-import MenuComponent from './MenuComponent.vue';
+import MenuComponent from './menuComponent.vue';
 import PiePaginaComponent from './piePaginaComponent.vue';
-// Eliminado: jwtDecode no se usa en este componente.
-// import { jwtDecode } from 'jwt-decode';
+import ScrollBotonComponent from './scrollBotonComponent.vue';
 
-// Se recomienda definir un tipo para las compras para mejorar la legibilidad y seguridad del código.
 interface DetalleCompra {
     videojuego: string;
     plataforma: string;
@@ -69,7 +83,7 @@ const formatPrice = (price: number): string => {
     }
     return price.toLocaleString('es-ES', {
         minimumFractionDigits: 2,
-        maximumFractionDigits: 2
+        maximumFractionDigits: 2,
     });
 };
 
@@ -78,15 +92,15 @@ const fetchCompras = async () => {
     try {
         const token = localStorage.getItem('token');
         if (!token) {
-            // Es buena práctica manejar el caso en que no haya token.
-            console.error("No se encontró el token de autenticación.");
+            console.error('No se encontró el token de autenticación.');
             compras.value = [];
             return;
         }
+
         const response = await fetch(`${urlBackend}/api/compras/historial`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token })
+            body: JSON.stringify({ token }),
         });
 
         if (!response.ok) {
@@ -95,13 +109,28 @@ const fetchCompras = async () => {
 
         const data = await response.json();
         compras.value = data || [];
-        console.log(data);
     } catch (e) {
         console.error(e);
         compras.value = [];
     } finally {
         cargando.value = false;
     }
+};
+
+const descargarFactura = async (compra: Compra, index: number) => {
+    await nextTick();
+    const el = document.getElementById(`id:${index}`);
+    if (!el) return;
+
+    const opt = {
+        margin: 0.5,
+        filename: `factura_${compra.fecha.replace(/[: ]/g, '_')}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' },
+    };
+
+    html2pdf().set(opt).from(el).save();
 };
 
 onMounted(() => {

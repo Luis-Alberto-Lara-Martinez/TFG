@@ -2,8 +2,10 @@
 
 namespace App\Controller;
 
+use App\Entity\Categorias;
 use App\Entity\Imagenes;
-use App\Entity\Roles;
+use App\Entity\Plataformas;
+use App\Entity\Reviews;
 use App\Entity\Usuarios;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -29,11 +31,52 @@ final class VideojuegosController extends AbstractController
         } catch (\Exception $e) {
             return new JsonResponse(['error' => 'Token inválido'], 401);
         }
-        if ($tokenUser["roles"][0] == "administrador") {
-            $videojuegos = $em->getRepository(Videojuegos::class)->findAll();
-        } else {
-            $videojuegos = $em->getRepository(Videojuegos::class)->findBy(["deleted" => false]);
+        $videojuegos = $em->getRepository(Videojuegos::class)->findBy(["deleted" => false]);
+        $result = [];
+        foreach ($videojuegos as $videojuego) {
+            $imagenes = [];
+            foreach ($videojuego->getImagenes() as $img) {
+                $imagenes[] = [
+                    'url' => $img->getUrl(),
+                    'portada' => $img->isPortada()
+                ];
+            }
+            $categorias = [];
+            foreach ($videojuego->getCategoria() as $cat) {
+                $categorias[] = $cat->getNombre();
+            }
+            $result[] = [
+                'id' => $videojuego->getId(),
+                'nombre' => $videojuego->getNombre(),
+                'nota_media' => $videojuego->getNotaMedia(),
+                'deleted' => $videojuego->isDeleted(),
+                'precio' => $videojuego->getPrecio(),
+                'fecha_lanzamiento' => $videojuego->getFechaLanzamiento()->format('d/m/Y'),
+                'stock' => $videojuego->getStock(),
+                'imagenes' => $imagenes,
+                'categorias' => $categorias,
+                'plataforma' => $videojuego->getPlataforma()?->getNombre(),
+                'fecha_creacion' => $videojuego->getCreatedAt()->format('d/m/Y'),
+            ];
         }
+        return new JsonResponse($result);
+    }
+
+    #[Route('/listarVideojuegosAdmin', name: 'app_listar_videojuegos_admin', methods: ['POST'])]
+    public function listarVideojuegosAdmin(Request $request, EntityManagerInterface $em, JWTTokenManagerInterface $jwtManager): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+        $token = $data['token'] ?? null;
+        if (!$token) {
+            return new JsonResponse(['error' => 'Token no proporcionado'], 401);
+        }
+        try {
+            $tokenUser = $jwtManager->parse($token); // Lanza excepción si el token no es válido
+        } catch (\Exception $e) {
+            return new JsonResponse(['error' => 'Token inválido'], 401);
+        }
+
+        $videojuegos = $em->getRepository(Videojuegos::class)->findAll();
         $result = [];
         foreach ($videojuegos as $videojuego) {
             $imagenes = [];
@@ -51,16 +94,91 @@ final class VideojuegosController extends AbstractController
                 'id' => $videojuego->getId(),
                 'nombre' => $videojuego->getNombre(),
                 'deleted' => $videojuego->isDeleted(),
+                'nota_media' => $videojuego->getNotaMedia(),
                 'precio' => $videojuego->getPrecio(),
                 'fecha_lanzamiento' => $videojuego->getFechaLanzamiento()->format('d/m/Y'),
                 'stock' => $videojuego->getStock(),
                 'imagenes' => $imagenes,
                 'categorias' => $categorias,
                 'plataforma' => $videojuego->getPlataforma()?->getNombre(),
-                'fecha_creacion' => $videojuego->getCreated_at()->format('d/m/Y'),
+                'fecha_creacion' => $videojuego->getCreatedAt()->format('d/m/Y'),
             ];
         }
         return new JsonResponse($result);
+    }
+
+    #[Route('/crear', name: 'crear_videojuego', methods: ['POST'])]
+    public function crearVideojuego(Request $request, EntityManagerInterface $em, JWTTokenManagerInterface $jwtManager): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+        $token = $data['token'] ?? null;
+        if (!$token) {
+            return new JsonResponse(['error' => 'Token no proporcionado'], 401);
+        }
+        try {
+            $tokenUser = $jwtManager->parse($token);
+        } catch (\Exception $e) {
+            return new JsonResponse(['error' => 'Token inválido'], 401);
+        }
+        $usuario = $em->getRepository(Usuarios::class)->find($tokenUser["id"]);
+
+        // Buscar la plataforma
+        $plataforma = $em->getRepository(Plataformas::class)->findOneBy(["nombre" => $data['plataforma']]);
+        if (!$plataforma) {
+            $plataforma = new Plataformas();
+            $plataforma->setNombre($data['plataforma']);
+            $em->persist($plataforma);
+        }
+
+        // ❗ Comprobación: si ya existe un videojuego con ese nombre y plataforma
+        $existente = $em->getRepository(Videojuegos::class)->findOneBy([
+            'nombre' => $data['nombre'],
+            'plataforma' => $plataforma
+        ]);
+
+        if ($existente) {
+            return new JsonResponse(['error' => 'Videojuego ya existente']);
+        }
+
+        // Crear el nuevo videojuego
+        $videojuego = new Videojuegos();
+        $videojuego->setCreatedBy($usuario);
+        $videojuego->setModifiedBy($usuario);
+        $videojuego->setNombre($data['nombre']);
+        $videojuego->setPrecio($data['precio']);
+        $videojuego->setFechaLanzamiento(new \DateTime($data['fecha_lanzamiento']));
+        $videojuego->setStock($data['stock']);
+        $videojuego->setDeleted(false);
+        $videojuego->setModifiedAt(new \DateTime());
+        $videojuego->setCreatedAt(new \DateTime());
+        $videojuego->setPlataforma($plataforma);
+
+        foreach ($data["categorias"] as $cat) {
+            $categoria = $em->getRepository(Categorias::class)->findOneBy(["nombre" => $cat]);
+            if (!$categoria) {
+                $categoria = new Categorias();
+                $categoria->setNombre($cat);
+                $em->persist($categoria);
+            }
+
+            if (!$videojuego->getCategoria()->contains($categoria)) {
+                $videojuego->addCategoria($categoria);
+            }
+        }
+
+        $em->persist($videojuego);
+
+        foreach ($data["imagenes"] as $imagen) {
+            $img = new Imagenes();
+            $img->setVideojuego($videojuego);
+            $img->setUrl($imagen["url"]);
+            $img->setPortada($imagen["portada"]);
+            $em->persist($img);
+        }
+
+        $em->flush();
+
+        return new JsonResponse(['message' => "Videojuego agregado correctamente"]);
     }
 
     #[Route('/editar/{id}', name: 'editar_videojuego', methods: ['PUT'])]
@@ -114,8 +232,8 @@ final class VideojuegosController extends AbstractController
         return new JsonResponse(['message' => "Videojuego eliminado correctamente"]);
     }
 
-    #[Route('/editarCarrito', name: 'editar_carrito', methods: ['POST'])]
-    public function editarCarrito(Request $request, EntityManagerInterface $em, JWTTokenManagerInterface $jwtManager): JsonResponse
+    #[Route('/insertarAlCarrito', name: 'insertar_carrito', methods: ['POST'])]
+    public function insertarAlCarrito(Request $request, EntityManagerInterface $em, JWTTokenManagerInterface $jwtManager): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
         $token = $data['token'] ?? null;
@@ -135,35 +253,37 @@ final class VideojuegosController extends AbstractController
         if (!$usuario || !$videojuego) {
             return new JsonResponse(['error' => 'Usuario o videojuego no encontrado'], 404);
         }
-        // Lógica para añadir/editar el carrito
+
         $carrito = $usuario->getCarrito() ?? [];
         $stockDisponible = $videojuego->getStock();
         $encontrado = false;
-        foreach ($carrito as &$item) {
-            if ($item['videojuego_id'] == $videojuegoId) {
-                if ($item['cantidad'] + $cantidad > $stockDisponible) {
-                    return new JsonResponse(['error' => 'No hay suficiente stock disponible'], 400);
+
+        // Iterate by reference to modify the original array elements
+        foreach ($carrito as &$item) { //
+            if ($item['videojuego_id'] == $videojuegoId) { //
+                if ($item['cantidad'] + $cantidad > $stockDisponible) { //
+                    return new JsonResponse(['error' => 'No hay suficiente stock disponible']); //
                 }
-                $item['cantidad'] += $cantidad;
-                $encontrado = true;
-                break;
+                $item['cantidad'] += $cantidad; //
+                $encontrado = true; //
+                break; // Exit loop once found and updated
             }
         }
-        unset($item);
-        if (!$encontrado) {
-            if ($cantidad > $stockDisponible) {
-                return new JsonResponse(['error' => 'No hay suficiente stock disponible'], 400);
+        unset($item); // Break the reference to avoid unintended side effects
+        if (!$encontrado) { //
+            if ($cantidad > $stockDisponible) { //
+                return new JsonResponse(['error' => 'No hay suficiente stock disponible']); //
             }
-            $carrito[] = [
-                'videojuego_id' => $videojuegoId,
-                'cantidad' => $cantidad
+            $carrito[] = [ //
+                'videojuego_id' => $videojuegoId, //
+                'cantidad' => $cantidad //
             ];
         }
-        // Guardar el array actualizado, no sobreescribirlo
-        $usuario->setCarrito($carrito);
-        $em->persist($usuario);
-        $em->flush();
-        return new JsonResponse(['success' => true]);
+
+        $usuario->setCarrito($carrito); //
+        $em->persist($usuario); //
+        $em->flush(); //
+        return new JsonResponse(['message' => "Videojuego agregado al carrito correctamente"]); //
     }
 
     #[Route('/plataformas', name: 'obtener_plataformas', methods: ['POST'])]
@@ -179,9 +299,12 @@ final class VideojuegosController extends AbstractController
         } catch (\Exception $e) {
             return new JsonResponse(['error' => 'Token inválido'], 401);
         }
-        $plataformas = $em->getConnection()->executeQuery('SELECT DISTINCT nombre FROM plataformas')->fetchAllAssociative();
-        $nombres = array_map(fn($p) => $p['nombre'], $plataformas);
-        return new JsonResponse($nombres);
+        $plataformas = $em->getRepository(Plataformas::class)->findAll();
+        $result = [];
+        foreach ($plataformas as $plataforma) {
+            $result[] = $plataforma->getNombre();
+        }
+        return new JsonResponse($result);
     }
 
     #[Route('/categorias', name: 'obtener_categorias', methods: ['POST'])]
@@ -197,17 +320,19 @@ final class VideojuegosController extends AbstractController
         } catch (\Exception $e) {
             return new JsonResponse(['error' => 'Token inválido'], 401);
         }
-        $categorias = $em->getConnection()->executeQuery('SELECT DISTINCT nombre FROM categorias')->fetchAllAssociative();
-        $nombres = array_map(fn($c) => $c['nombre'], $categorias);
-        return new JsonResponse($nombres);
+        $categorias = $em->getRepository(Categorias::class)->findAll();
+        $result = [];
+        foreach ($categorias as $categoria) {
+            $result[] = $categoria->getNombre();
+        }
+        return new JsonResponse($result);
     }
 
-    #[Route('/buscarPorTitulo', name: 'buscar_por_titulo', methods: ['POST'])]
-    public function buscarPorTitulo(Request $request, EntityManagerInterface $em, JWTTokenManagerInterface $jwtManager): JsonResponse
+    #[Route('/filtros', name: 'filtros', methods: ['POST'])]
+    public function filtros(Request $request, EntityManagerInterface $em, JWTTokenManagerInterface $jwtManager): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
         $token = $data['token'] ?? null;
-        $titulo = $data['titulo'] ?? '';
         if (!$token) {
             return new JsonResponse(['error' => 'Token no proporcionado'], 401);
         }
@@ -216,10 +341,40 @@ final class VideojuegosController extends AbstractController
         } catch (\Exception $e) {
             return new JsonResponse(['error' => 'Token inválido'], 401);
         }
+
+        // Se usa el QueryBuilder para una consulta dinámica y eficiente
         $qb = $em->getRepository(Videojuegos::class)->createQueryBuilder('v');
-        $qb->where('LOWER(v.nombre) LIKE :titulo')
-            ->setParameter('titulo', '%' . strtolower($titulo) . '%');
+
+        // Solo videojuegos no eliminados
+        $qb->where('v.deleted = :deleted')->setParameter('deleted', false);
+
+        // Filtro por título (búsqueda parcial)
+        if (!empty($data['titulo'])) {
+            $qb->andWhere('v.nombre LIKE :titulo')
+                ->setParameter('titulo', '%' . $data['titulo'] . '%');
+        }
+
+        // Filtro por plataforma
+        if (!empty($data['plataforma'])) {
+            $qb->innerJoin('v.plataforma', 'p')
+                ->andWhere('p.nombre = :plataforma')
+                ->setParameter('plataforma', $data['plataforma']);
+        }
+
+        // Filtro por categoría
+        if (!empty($data['categoria'])) {
+            $qb->innerJoin('v.categoria', 'c')
+                ->andWhere('c.nombre = :categoria')
+                ->setParameter('categoria', $data['categoria']);
+        }
+
+        // Orden por precio
+        if (!empty($data['orden']) && in_array($data['orden'], ['ASC', 'DESC'])) {
+            $qb->orderBy('v.precio', $data['orden']);
+        }
+
         $videojuegos = $qb->getQuery()->getResult();
+
         $result = [];
         foreach ($videojuegos as $videojuego) {
             $imagenes = [];
@@ -248,7 +403,7 @@ final class VideojuegosController extends AbstractController
         return new JsonResponse($result);
     }
 
-    #[Route('/resenas/listar', name: 'listar_resenas', methods: ['POST'])]
+    #[Route('/listarReviews', name: 'listar_resenas', methods: ['POST'])]
     public function listarResenas(Request $request, EntityManagerInterface $em, JWTTokenManagerInterface $jwtManager): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
@@ -266,27 +421,27 @@ final class VideojuegosController extends AbstractController
         if (!$videojuego) {
             return new JsonResponse(['error' => 'Videojuego no encontrado'], 404);
         }
-        $resenas = $videojuego->getResenas(); // Asumiendo relación getResenas()
+        $resenas = $videojuego->getReviews(); // Asumiendo relación getResenas()
         $result = [];
         foreach ($resenas as $resena) {
             $result[] = [
-                'id' => $resena->getId(),
-                'usuario' => $resena->getUsuario()->getNombre(),
+                'usuario' => $resena->getUsuario()->getNombre() . " " . $resena->getUsuario()->getApellido(),
                 'comentario' => $resena->getComentario(),
-                'puntuacion' => $resena->getPuntuacion()
+                'nota' => $resena->getNota(),
+                'fecha' => $resena->getCreatedAt()->format("d/m/Y h:i:s")
             ];
         }
         return new JsonResponse($result);
     }
 
-    #[Route('/resenas/crear', name: 'crear_resena', methods: ['POST'])]
+    #[Route('/crearReview', name: 'crear_review', methods: ['POST'])]
     public function crearResena(Request $request, EntityManagerInterface $em, JWTTokenManagerInterface $jwtManager): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
         $token = $data['token'] ?? null;
-        $productoId = $data['productoId'] ?? null;
+        $productoId = $data['videojuego_id'] ?? null;
         $comentario = $data['comentario'] ?? '';
-        $puntuacion = $data['puntuacion'] ?? null;
+        $puntuacion = $data['nota'] ?? null;
         if (!$token || !$productoId || !$comentario || !$puntuacion) {
             return new JsonResponse(['error' => 'Faltan datos'], 400);
         }
@@ -300,15 +455,29 @@ final class VideojuegosController extends AbstractController
         if (!$usuario || !$videojuego) {
             return new JsonResponse(['error' => 'Usuario o videojuego no encontrado'], 404);
         }
-        $resena = new \App\Entity\Resenas();
+        $resena = new Reviews();
         $resena->setUsuario($usuario);
         $resena->setVideojuego($videojuego);
         $resena->setComentario($comentario);
-        $resena->setPuntuacion($puntuacion);
-        $resena->setFecha(new \DateTime());
+        $resena->setNota($puntuacion);
+        $resena->setCreatedAt(new \DateTime());
         $em->persist($resena);
         $em->flush();
-        return new JsonResponse(['success' => true]);
+
+        $sumaNotas = 0;
+        $contadorReviews = 0;
+        foreach ($videojuego->getReviews() as $review) {
+            $contadorReviews++;
+            $sumaNotas += $review->getNota();
+        }
+        if ($contadorReviews > 0) {
+            $notaMedia = $sumaNotas / $contadorReviews;
+        } else {
+            $notaMedia = 0;
+        }
+        $videojuego->setNotaMedia(round($notaMedia, 2));
+        $em->flush();
+        return new JsonResponse(['message' => "Reseña creada correctamente"]);
     }
 
     #[Route('/ultimasNovedades', name: 'ultimas_novedades', methods: ['POST'])]
@@ -342,6 +511,7 @@ final class VideojuegosController extends AbstractController
                 'id' => $videojuego->getId(),
                 'nombre' => $videojuego->getNombre(),
                 'deleted' => $videojuego->isDeleted(),
+                'nota_media'=>$videojuego->getNotaMedia(),
                 'precio' => $videojuego->getPrecio(),
                 'fecha_lanzamiento' => $videojuego->getFechaLanzamiento()->format('d/m/Y'),
                 'stock' => $videojuego->getStock(),

@@ -1,13 +1,13 @@
 <template>
     <MenuComponent />
-    <div class="container my-5">
+    <div class="container my-5 text-white">
         <h2 class="mb-4 text-center">Carrito de Compras</h2>
         <div v-if="cargando" class="text-center my-5">
             <span class="spinner-border"></span>
         </div>
         <div v-else>
             <div v-if="carrito.length === 0" class="alert alert-info text-center">Tu carrito está vacío.</div>
-            <div v-else>
+            <div v-else class="table-responsive">
                 <table class="table table-striped">
                     <thead>
                         <tr>
@@ -31,10 +31,13 @@
                                         class="fa fa-trash"></i> Eliminar</button>
                             </td>
                         </tr>
+                        <tr>
+                            <td class="text-end fw-bold" colspan="6">Total: {{ formatPrice(totalCarrito) }} €</td>
+                        </tr>
                     </tbody>
                 </table>
-                <div class="text-end fw-bold">Total: {{ formatPrice(totalCarrito) }} €</div>
             </div>
+            <PaypalComponent :total="totalCarrito" />
         </div>
         <ScrollBotonComponent />
     </div>
@@ -44,9 +47,13 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import urlBackend from '@/rutaApi';
-import MenuComponent from './MenuComponent.vue';
+import MenuComponent from './menuComponent.vue';
 import ScrollBotonComponent from './scrollBotonComponent.vue';
 import PiePaginaComponent from './piePaginaComponent.vue';
+import { loadScript } from '@paypal/paypal-js';
+import PaypalComponent from './paypalComponent.vue';
+
+// todovideojuegosdev@personal.example.com
 
 const carrito = ref<any[]>([]);
 const cargando = ref(false);
@@ -69,7 +76,7 @@ const fetchCarrito = async () => {
     cargando.value = true;
     try {
         const token = localStorage.getItem('token');
-        const response = await fetch(urlBackend + '/api/carrito/obtener', {
+        const response = await fetch(urlBackend + '/api/usuarios/obtenerCarrito', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ token })
@@ -86,17 +93,17 @@ const fetchCarrito = async () => {
 const eliminarDelCarrito = async (videojuegoId: number) => {
     try {
         const token = localStorage.getItem('token');
-        const response = await fetch(urlBackend + '/api/carrito/eliminar', {
+        const response = await fetch(urlBackend + '/api/usuarios/eliminarDeCarrito', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ token, videojuegoId })
         });
         const data = await response.json();
         if (data.success) {
-            await fetchCarrito(); // Recargar la lista del carrito desde el backend
+            await fetchCarrito();
         }
     } catch (e) {
-        // Manejo de error opcional
+
     }
 };
 

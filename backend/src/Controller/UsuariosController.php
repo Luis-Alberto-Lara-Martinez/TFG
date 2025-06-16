@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\Roles;
+use App\Entity\Videojuegos;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Attribute\Route;
@@ -158,7 +159,7 @@ final class UsuariosController extends AbstractController
             return new JsonResponse(['error' => 'Token no proporcionado'], 401);
         }
         try {
-            $jwtManager->parse($token);
+            $userData = $jwtManager->parse($token);
         } catch (\Exception $e) {
             return new JsonResponse(['error' => 'Token inválido'], 401);
         }
@@ -166,16 +167,22 @@ final class UsuariosController extends AbstractController
         if (!$id) {
             return new JsonResponse(['error' => 'ID de usuario no proporcionado'], 400);
         }
+        $required = ['nombre', 'apellido', 'email', 'telefono', 'direccion'];
+        foreach ($required as $field) {
+            if (empty($data[$field]) || !isset($data[$field]) || trim($data[$field]) === '') {
+                return new JsonResponse(['error' => "Falta el campo $field"]);
+            }
+        }
         $usuario = $em->getRepository(Usuarios::class)->find($id);
         if (!$usuario) {
             return new JsonResponse(['error' => 'Usuario no encontrado'], 404);
         }
         // Actualizar campos editables
-        $usuario->setNombre($data['nombre'] ?? $usuario->getNombre());
-        $usuario->setApellido($data['apellido'] ?? $usuario->getApellido());
-        $usuario->setEmail($data['email'] ?? $usuario->getEmail());
-        $usuario->setTelefono($data['telefono'] ?? $usuario->getTelefono());
-        $usuario->setDireccion($data['direccion'] ?? $usuario->getDireccion());
+        $usuario->setNombre(trim($data['nombre']) ?? $usuario->getNombre());
+        $usuario->setApellido(trim($data['apellido']) ?? $usuario->getApellido());
+        $usuario->setEmail(trim($data['email']) ?? $usuario->getEmail());
+        $usuario->setTelefono(trim($data['telefono']) ?? $usuario->getTelefono());
+        $usuario->setDireccion(trim($data['direccion']) ?? $usuario->getDireccion());
         $usuario->setDeleted(isset($data['deleted']) ? filter_var($data['deleted'], FILTER_VALIDATE_BOOLEAN) : $usuario->isDeleted());
         // Rol
         if (isset($data['rol'])) {
@@ -184,7 +191,6 @@ final class UsuariosController extends AbstractController
                 $usuario->setRol($rol);
             }
         }
-        $userData = $jwtManager->parse($token);
         $usuarioModificador = $em->getRepository(Usuarios::class)->find($userData['id']);
         if ($usuarioModificador) {
             $usuario->setModifiedBy($usuarioModificador); // Asignar el usuario que modifica
@@ -253,8 +259,8 @@ final class UsuariosController extends AbstractController
         $em->flush();
         return new JsonResponse(['success' => true]);
     }
-    
-    #[Route('/carrito/obtener', name: 'obtener_carrito', methods: ['POST'])]
+
+    #[Route('/obtenerCarrito', name: 'obtener_carrito', methods: ['POST'])]
     public function obtenerCarrito(Request $request, EntityManagerInterface $em, JWTTokenManagerInterface $jwtManager): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
@@ -274,7 +280,7 @@ final class UsuariosController extends AbstractController
         $carrito = $usuario->getCarrito() ?? [];
         $result = [];
         foreach ($carrito as $item) {
-            $videojuego = $em->getRepository(\App\Entity\Videojuegos::class)->find($item['videojuego_id']);
+            $videojuego = $em->getRepository(Videojuegos::class)->find($item['videojuego_id']);
             if ($videojuego) {
                 $result[] = [
                     'videojuego_id' => $item['videojuego_id'],
@@ -288,7 +294,7 @@ final class UsuariosController extends AbstractController
         return new JsonResponse($result);
     }
 
-    #[Route('/carrito/eliminar', name: 'eliminar_carrito', methods: ['POST'])]
+    #[Route('/eliminarDeCarrito', name: 'eliminar_carrito', methods: ['POST'])]
     public function eliminarDelCarrito(Request $request, EntityManagerInterface $em, JWTTokenManagerInterface $jwtManager): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
@@ -307,7 +313,7 @@ final class UsuariosController extends AbstractController
             return new JsonResponse(['error' => 'Usuario no encontrado'], 404);
         }
         $carrito = $usuario->getCarrito() ?? [];
-        $nuevoCarrito = array_filter($carrito, function($item) use ($videojuegoId) {
+        $nuevoCarrito = array_filter($carrito, function ($item) use ($videojuegoId) {
             return $item['videojuego_id'] != $videojuegoId;
         });
         $usuario->setCarrito(array_values($nuevoCarrito));
