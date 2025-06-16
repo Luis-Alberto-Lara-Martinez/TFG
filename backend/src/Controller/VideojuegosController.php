@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Entity\Imagenes;
 use App\Entity\Roles;
 use App\Entity\Usuarios;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -56,6 +57,7 @@ final class VideojuegosController extends AbstractController
                 'imagenes' => $imagenes,
                 'categorias' => $categorias,
                 'plataforma' => $videojuego->getPlataforma()?->getNombre(),
+                'fecha_creacion' => $videojuego->getCreated_at()->format('d/m/Y'),
             ];
         }
         return new JsonResponse($result);
@@ -111,7 +113,7 @@ final class VideojuegosController extends AbstractController
         $em->flush();
         return new JsonResponse(['message' => "Videojuego eliminado correctamente"]);
     }
-    
+
     #[Route('/editarCarrito', name: 'editar_carrito', methods: ['POST'])]
     public function editarCarrito(Request $request, EntityManagerInterface $em, JWTTokenManagerInterface $jwtManager): JsonResponse
     {
@@ -309,8 +311,8 @@ final class VideojuegosController extends AbstractController
         return new JsonResponse(['success' => true]);
     }
 
-    #[Route('/mejorValorados', name: 'mejor_valorados', methods: ['POST'])]
-    public function mejorValorados(Request $request, EntityManagerInterface $em, JWTTokenManagerInterface $jwtManager): JsonResponse
+    #[Route('/ultimasNovedades', name: 'ultimas_novedades', methods: ['POST'])]
+    public function ultimasNovedades(Request $request, EntityManagerInterface $em, JWTTokenManagerInterface $jwtManager): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
         $token = $data['token'] ?? null;
@@ -322,19 +324,32 @@ final class VideojuegosController extends AbstractController
         } catch (\Exception $e) {
             return new JsonResponse(['error' => 'Token inválido'], 401);
         }
-        $conn = $em->getConnection();
-        $sql = "SELECT v.id, v.nombre, v.precio, v.deleted, v.fecha_lanzamiento, p.nombre as plataforma, 
-                    (SELECT url FROM imagenes i WHERE i.videojuego_id = v.id LIMIT 1) as imagen,
-                    ROUND(AVG(r.puntuacion),2) as valoracion_media
-                FROM videojuegos v
-                LEFT JOIN plataformas p ON v.plataforma_id = p.id
-                LEFT JOIN resenas r ON r.videojuego_id = v.id
-                WHERE v.deleted = 0
-                GROUP BY v.id
-                ORDER BY valoracion_media DESC NULLS LAST, v.nombre ASC
-                LIMIT 5";
-        $stmt = $conn->prepare($sql);
-        $result = $stmt->executeQuery()->fetchAllAssociative();
+        $videojuegos = $em->getRepository(Videojuegos::class)->findBy(["deleted" => false], ["created_at" => "DESC"], 6);
+        $result = [];
+        foreach ($videojuegos as $videojuego) {
+            $imagenes = [];
+            foreach ($videojuego->getImagenes() as $img) {
+                $imagenes[] = [
+                    'url' => $img->getUrl(),
+                    'portada' => $img->isPortada()
+                ];
+            }
+            $categorias = [];
+            foreach ($videojuego->getCategoria() as $cat) {
+                $categorias[] = $cat->getNombre();
+            }
+            $result[] = [
+                'id' => $videojuego->getId(),
+                'nombre' => $videojuego->getNombre(),
+                'deleted' => $videojuego->isDeleted(),
+                'precio' => $videojuego->getPrecio(),
+                'fecha_lanzamiento' => $videojuego->getFechaLanzamiento()->format('d/m/Y'),
+                'stock' => $videojuego->getStock(),
+                'imagenes' => $imagenes,
+                'categorias' => $categorias,
+                'plataforma' => $videojuego->getPlataforma()?->getNombre(),
+            ];
+        }
         return new JsonResponse($result);
     }
 }

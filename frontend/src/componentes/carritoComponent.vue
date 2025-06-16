@@ -1,4 +1,5 @@
 <template>
+    <MenuComponent />
     <div class="container my-5">
         <h2 class="mb-4 text-center">Carrito de Compras</h2>
         <div v-if="cargando" class="text-center my-5">
@@ -26,7 +27,8 @@
                             <td>{{ item.cantidad }}</td>
                             <td>{{ formatPrice(item.precio * item.cantidad) }} €</td>
                             <td>
-                                <button class="btn btn-danger btn-sm" @click="eliminarDelCarrito(item.videojuego_id)"><i class="fa fa-trash"></i> Eliminar</button>
+                                <button class="btn btn-danger btn-sm" @click="eliminarDelCarrito(item.videojuego_id)"><i
+                                        class="fa fa-trash"></i> Eliminar</button>
                             </td>
                         </tr>
                     </tbody>
@@ -34,12 +36,17 @@
                 <div class="text-end fw-bold">Total: {{ formatPrice(totalCarrito) }} €</div>
             </div>
         </div>
+        <ScrollBotonComponent />
     </div>
+    <PiePaginaComponent />
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import urlBackend from '@/rutaApi';
+import MenuComponent from './MenuComponent.vue';
+import ScrollBotonComponent from './scrollBotonComponent.vue';
+import PiePaginaComponent from './piePaginaComponent.vue';
 
 const carrito = ref<any[]>([]);
 const cargando = ref(false);

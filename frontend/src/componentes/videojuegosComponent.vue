@@ -32,7 +32,8 @@
                     <label class="form-label">Categoría</label>
                     <select v-model="categoriaSeleccionada" class="form-select">
                         <option value="">Todas</option>
-                        <option v-for="categoria in categorias" :key="categoria" :value="categoria">{{ categoria }}</option>
+                        <option v-for="categoria in categorias" :key="categoria" :value="categoria">{{ categoria }}
+                        </option>
                     </select>
                 </div>
                 <div class="col-md-2 d-grid">
@@ -86,7 +87,8 @@
                             <p class="card-text mb-2"><strong>Fecha de lanzamiento: </strong>
                                 <span>{{ juego.fecha_lanzamiento || 'No disponible' }}</span>
                             </p>
-                            <button class="btn btn-success mt-2" @click="anadirAlCarrito(juego.id)">Añadir al carrito</button>
+                            <button class="btn btn-success mt-2" @click="anadirAlCarrito(juego.id)">Añadir al
+                                carrito</button>
                             <button class="btn btn-info mt-2" @click="irAResenas(juego.id)">Ver reseñas</button>
                         </div>
                     </div>
@@ -165,7 +167,7 @@ const plataformaSeleccionada = ref('');
 const categoriaSeleccionada = ref('');
 const plataformas = ref<string[]>([]);
 const categorias = ref<string[]>([]);
-const resenasId = ref<number|null>(null);
+const resenasId = ref<number | null>(null);
 
 const buscarPorTitulo = async () => {
     cargando.value = true;
@@ -247,16 +249,9 @@ function scrollArriba() {
 
 
 onMounted(() => {
-    // Comprobación de rol administrador
-    const token = localStorage.getItem('token');
-    const rolToken = jwtDecode<any>(localStorage.getItem('token') || '').roles[0];
-    if (rolToken != "administrador") {
-        router.push('/inicio');
-    } else {
-        fetchVideojuegos();
-        obtenerPlataformas();
-        obtenerCategorias();
-    }
+    fetchVideojuegos();
+    obtenerPlataformas();
+    obtenerCategorias();
 });
 </script>
 

@@ -10,9 +10,9 @@
         </div>
     </div>
     <div class="container my-5">
-        <h2 class="text-center text-white">Explora nuestros videojuegos mejor valorados</h2>
+        <h2 class="text-center text-white mb-4">Explora nuestras últimas novedades</h2>
         <div v-if="cargandoValorados" class="text-center my-4">
-            <span class="spinner-border"></span>
+            <span class="spinner-border text-white"></span>
         </div>
         <div v-else>
             <div class="row justify-content-center">
@@ -37,12 +37,14 @@
                             </div>
                         </div>
                         <div v-else>
-                            <img v-if="juego.imagen" :src="juego.imagen" class="card-img-top" :alt="juego.nombre" style="object-fit:cover;height:200px;">
+                            <img v-if="juego.imagen" :src="juego.imagen" class="card-img-top" :alt="juego.nombre"
+                                style="object-fit:cover;height:200px;">
                             <span v-else>Sin imágenes</span>
                         </div>
                         <div class="card-body">
                             <h5 class="card-title">{{ juego.nombre }}</h5>
-                            <p class="card-text mb-1"><strong>Media valoración:</strong> {{ juego.valoracion_media }}/5</p>
+                            <p class="card-text mb-1"><strong>Media valoración:</strong> {{ juego.valoracion_media }}/5
+                            </p>
                             <p class="card-text mb-1"><strong>Precio:</strong> {{ formatPrice(juego.precio) }} €</p>
                             <p class="card-text mb-1"><strong>Plataforma:</strong> {{ juego.plataforma }}</p>
                         </div>
@@ -50,15 +52,14 @@
                 </div>
             </div>
         </div>
-        <p class="text-center text-white">Aquí puedes encontrar información y enlaces útiles.</p>
-        
     </div>
     <ScrollBotonComponent />
     <PiePaginaComponent />
 </template>
 
 <script setup lang="ts">
-import MenuComponent from './menuComponent.vue';
+import urlBackend from '@/rutaApi';
+import MenuComponent from './MenuComponent.vue';
 import PiePaginaComponent from './piePaginaComponent.vue';
 import ScrollBotonComponent from './scrollBotonComponent.vue';
 import { ref, onMounted } from 'vue';
@@ -81,7 +82,7 @@ const fetchMejorValorados = async () => {
     cargandoValorados.value = true;
     try {
         const token = localStorage.getItem('token');
-        const response = await fetch('/api/videojuegos/mejorValorados', {
+        const response = await fetch(urlBackend + '/api/videojuegos/ultimasNovedades', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ token })

@@ -20,7 +20,8 @@
                     </div>
                     <div class="mb-3">
                         <label for="email" class="form-label">Email <span class="text-danger">*</span></label>
-                        <input v-model="email" type="email" id="email" class="form-control" required />
+                        <input v-model="email" type="email" id="email" class="form-control" required
+                            placeholder="example@gmail.com" />
                     </div>
                     <div class="mb-3">
                         <label for="password" class="form-label">Contraseña <span class="text-danger">*</span></label>
@@ -28,7 +29,8 @@
                     </div>
                     <div class="mb-3">
                         <label for="telefono" class="form-label">Teléfono <span class="text-danger">*</span></label>
-                        <input v-model="telefono" type="text" id="telefono" class="form-control" required />
+                        <input v-model="telefono" type="text" id="telefono" class="form-control" required
+                            pattern="^\d{9}$" placeholder="9 dígitos" />
                     </div>
                     <div class="mb-3">
                         <label for="direccion" class="form-label">Dirección <span class="text-danger">*</span></label>
@@ -94,7 +96,9 @@ const registrarUsuario = async () => {
             error.value = data.error;
         } else {
             localStorage.setItem("token", data.token);
-            router.push('/inicio');
+            router.push('/inicio').then(() => {
+                window.scrollTo(0, 0);
+            });
         }
     } catch (e) {
         error.value = 'Error de red o servidor';
@@ -121,6 +125,6 @@ const registrarUsuario = async () => {
 }
 
 .login {
-    background-color: rgba(0, 0, 0, 0.7)!important;
+    background-color: rgba(0, 0, 0, 0.7) !important;
 }
 </style>

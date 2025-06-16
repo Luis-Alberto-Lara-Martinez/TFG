@@ -15,6 +15,10 @@
                     <li class="nav-item">
                         <RouterLink class="nav-link text-white" to="/videojuegos">Videojuegos</RouterLink>
                     </li>
+                    <li>
+                        <RouterLink class="nav-link text-white" to="/historial-compras">Historial de compras
+                        </RouterLink>
+                    </li>
                     <li v-if="rolToken == 'administrador'" class="nav-item">
                         <RouterLink class="nav-link text-warning" to="/gestion-usuarios">Gestión de Usuarios
                         </RouterLink>
@@ -44,9 +48,6 @@
                         <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
                             <li>
                                 <RouterLink class="dropdown-item" to="/datos-personales">Datos personales</RouterLink>
-                            </li>
-                            <li>
-                                <RouterLink class="dropdown-item" to="/historial-compras">Historial de compras</RouterLink>
                             </li>
                             <li>
                                 <a class="dropdown-item btn" data-bs-toggle="modal"
