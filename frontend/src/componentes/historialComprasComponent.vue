@@ -187,7 +187,7 @@ const descargarFactura = async (compra: Compra, originalIndex: number) => {
 
     const opt = {
         margin: 0.5,
-        filename: `factura_${localStorage.getItem('username')}_${compra.fecha.replace(/[: ]/g, '_')}.pdf`,
+        filename: `factura_${compra.fecha.replace(/[: ]/g, '_')}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2 },
         jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' },
