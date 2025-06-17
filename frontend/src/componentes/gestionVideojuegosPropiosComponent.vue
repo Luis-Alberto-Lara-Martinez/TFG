@@ -1,7 +1,7 @@
 <template>
     <MenuComponent />
     <div class="container my-5 text-white">
-        <h2 class="mb-4 text-center">Videojuegos de mi base de datos</h2>
+        <h2 class="mb-4 text-center">Videojuegos Propios</h2>
         <div v-if="cargando" class="text-center my-5">
             <span class="spinner-border"></span>
         </div>

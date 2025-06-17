@@ -1,7 +1,7 @@
 <template>
     <MenuComponent />
     <div class="container my-5 text-white">
-        <h2 class="mb-4 text-center">Añadir Nuevo Videojuego (RAWG API)</h2>
+        <h2 class="mb-4 text-center">Añadir Videojuego</h2>
         <form class="mb-4 d-flex" @submit.prevent="buscar">
             <input v-model="busqueda" type="search" class="form-control me-2"
                 placeholder="Buscar videojuego por nombre">

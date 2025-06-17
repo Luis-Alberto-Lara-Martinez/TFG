@@ -33,7 +33,7 @@
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
                             <li>
-                                <RouterLink class="dropdown-item" to="/gestion-videojuegos">Nuestros Videojuegos
+                                <RouterLink class="dropdown-item" to="/gestion-videojuegos">Videojuegos Propios
                                 </RouterLink>
                             </li>
                             <li>
