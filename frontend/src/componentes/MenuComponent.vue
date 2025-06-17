@@ -68,7 +68,6 @@
         </div>
     </nav>
 
-    <!-- Modal Cambiar Contraseña -->
     <div class="modal fade" id="modalCambiarContrasena" tabindex="-1" aria-labelledby="modalCambiarContrasenaLabel"
         aria-hidden="true">
         <div class="modal-dialog">

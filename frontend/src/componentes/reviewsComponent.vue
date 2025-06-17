@@ -91,32 +91,27 @@ const nuevaPuntuacion = ref(5);
 const mensajeError = ref('');
 const isLoading = ref(false);
 
-// Pagination specific variables
 const currentPage = ref(1);
 const reviewsPerPage = 5;
 
-// Computed property for paginated reviews
 const paginatedResenas = computed(() => {
   const start = (currentPage.value - 1) * reviewsPerPage;
   const end = start + reviewsPerPage;
   return reseñas.value.slice(start, end);
 });
 
-// Computed property for total pages
 const totalPages = computed(() => {
   return Math.ceil(reseñas.value.length / reviewsPerPage);
 });
 
-// Function to scroll to the reviews section
 const scrollToReviews = async () => {
-  await nextTick(); // Ensure DOM is updated before scrolling
+  await nextTick();
   const reviewsSection = document.getElementById('reviews-section');
   if (reviewsSection) {
     reviewsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 };
 
-// Function for previous page
 const prevPage = () => {
   if (currentPage.value > 1) {
     currentPage.value--;
@@ -124,7 +119,6 @@ const prevPage = () => {
   }
 };
 
-// Function for next page
 const nextPage = () => {
   if (currentPage.value < totalPages.value) {
     currentPage.value++;
@@ -132,7 +126,6 @@ const nextPage = () => {
   }
 };
 
-// Cargar todos los productos al iniciar
 const cargarProductos = async () => {
   try {
     const token = localStorage.getItem('token');
@@ -148,9 +141,8 @@ const cargarProductos = async () => {
   }
 };
 
-// Cuando el usuario selecciona un producto
 const onProductoSeleccionado = () => {
-  currentPage.value = 1; // Reset to first page on new product selection
+  currentPage.value = 1;
   if (productoId.value) {
     fetchResenas(productoId.value);
   } else {
@@ -158,7 +150,6 @@ const onProductoSeleccionado = () => {
   }
 };
 
-// Obtener reseñas por ID de producto
 const fetchResenas = async (id: number) => {
   try {
     const token = localStorage.getItem('token');
@@ -174,7 +165,6 @@ const fetchResenas = async (id: number) => {
   }
 };
 
-// Enviar nueva reseña
 const enviarResena = async () => {
   mensajeError.value = '';
   if (!nuevaPuntuacion.value || !productoId.value) {
@@ -200,8 +190,8 @@ const enviarResena = async () => {
       fetchResenas(productoId.value);
       nuevoComentario.value = '';
       nuevaPuntuacion.value = 5;
-      currentPage.value = 1; // Go to first page after submitting a new review
-      scrollToReviews(); // Scroll to top after submitting
+      currentPage.value = 1;
+      scrollToReviews();
     } else {
       mensajeError.value = data.message || 'Error al enviar la reseña.';
     }
@@ -212,7 +202,6 @@ const enviarResena = async () => {
   }
 };
 
-// Cargar productos al montar
 onMounted(() => {
   cargarProductos();
 });

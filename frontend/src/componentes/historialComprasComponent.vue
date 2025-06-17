@@ -101,32 +101,27 @@ interface Compra {
 const compras = ref<Compra[]>([]);
 const cargando = ref(false);
 
-// Pagination specific variables
 const currentPage = ref(1);
-const comprasPerPage = 5; // You can adjust this number
+const comprasPerPage = 5;
 
-// Computed property for paginated purchases
 const paginatedCompras = computed(() => {
     const start = (currentPage.value - 1) * comprasPerPage;
     const end = start + comprasPerPage;
     return compras.value.slice(start, end);
 });
 
-// Computed property for total pages
 const totalPages = computed(() => {
     return Math.ceil(compras.value.length / comprasPerPage);
 });
 
-// Function to scroll to the purchase history section
 const scrollToPurchaseHistory = async () => {
-    await nextTick(); // Ensure DOM is updated before scrolling
+    await nextTick();
     const purchaseHistorySection = document.getElementById('purchase-history-section');
     if (purchaseHistorySection) {
         purchaseHistorySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 };
 
-// Function for previous page
 const prevPage = () => {
     if (currentPage.value > 1) {
         currentPage.value--;
@@ -134,7 +129,6 @@ const prevPage = () => {
     }
 };
 
-// Function for next page
 const nextPage = () => {
     if (currentPage.value < totalPages.value) {
         currentPage.value++;
@@ -174,7 +168,7 @@ const fetchCompras = async () => {
 
         const data = await response.json();
         compras.value = data || [];
-        currentPage.value = 1; // Reset to first page after fetching new data
+        currentPage.value = 1;
     } catch (e) {
         console.error(e);
         compras.value = [];
@@ -185,7 +179,6 @@ const fetchCompras = async () => {
 
 const descargarFactura = async (compra: Compra, originalIndex: number) => {
     await nextTick();
-    // Use the original index calculated for the full `compras` array
     const el = document.getElementById(`id:${originalIndex}`);
     if (!el) {
         console.error(`Element with ID id:${originalIndex} not found.`);
@@ -209,9 +202,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* Add any specific styles here if needed */
 .text-white .pagination .page-item .text-white {
     color: white !important;
-    /* Ensures the page text remains white */
 }
 </style>

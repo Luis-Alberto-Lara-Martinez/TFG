@@ -141,7 +141,6 @@ const fetchRoles = async () => {
             roles.value = data;
         }
     } catch (e) {
-        // No error visible, solo para edición
     }
 };
 
@@ -160,7 +159,6 @@ async function guardarEdicion() {
     error.value = '';
     try {
         const token = localStorage.getItem('token');
-        // Excluir campos que no se deben enviar
         const {
             createdAt, createdBy, modifiedAt, modifiedBy, ...usuarioEditado
         } = editUsuario.value;

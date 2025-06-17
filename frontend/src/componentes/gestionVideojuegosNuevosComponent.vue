@@ -120,9 +120,8 @@ const stocks = ref<{ [key: number]: number }>({});
 const errores = ref<{ [key: number]: string }>({});
 const router = useRouter();
 
-// Nuevas variables reactivas
 const showSuccessMessage = ref(false);
-const isAddingGame = ref<{ [key: number]: boolean }>({}); // To manage loading state per game button
+const isAddingGame = ref<{ [key: number]: boolean }>({});
 
 const fetchJuegos = async () => {
     cargando.value = true;
@@ -136,8 +135,7 @@ const fetchJuegos = async () => {
         juegos.value = data.results;
         siguienteHabilitado.value = (data.results && data.results.length === pageSize);
         indicesCarrusel.value = {};
-        // Initialize isAddingGame for each new game
-        isAddingGame.value = {}; // Reset for new search results
+        isAddingGame.value = {};
         await nextTick();
         juegos.value.forEach(juego => {
             if (juego.platforms && juego.platforms.length) {
@@ -145,7 +143,7 @@ const fetchJuegos = async () => {
             } else {
                 plataformasSeleccionadas.value[juego.id] = '';
             }
-            isAddingGame.value[juego.id] = false; // Initialize to false
+            isAddingGame.value[juego.id] = false;
         });
     } catch (e) {
         juegos.value = [];
@@ -178,14 +176,13 @@ watch(pagina, () => {
     fetchJuegos();
     window.scrollTo({
         top: 0,
-        behavior: 'smooth' // Optional: for a smooth scrolling animation
+        behavior: 'smooth'
     });
 });
 
 onMounted(fetchJuegos);
 
 const anadirJuego = async (juego: any, plataformaSeleccionada?: string, precio?: number, stock?: number) => {
-    // Validaciones
     errores.value[juego.id] = '';
     if (precio === undefined || precio === null || isNaN(precio) || precio <= 0) {
         errores.value[juego.id] = 'El precio debe ser un número mayor que 0.';
@@ -196,7 +193,6 @@ const anadirJuego = async (juego: any, plataformaSeleccionada?: string, precio?:
         return;
     }
 
-    // Set loading state for this specific game's button
     isAddingGame.value[juego.id] = true;
 
     try {
@@ -231,15 +227,15 @@ const anadirJuego = async (juego: any, plataformaSeleccionada?: string, precio?:
             showSuccessMessage.value = true;
             setTimeout(() => {
                 showSuccessMessage.value = false;
-            }, 3000); // Hide after 3 seconds
+            }, 3000);
         } else {
-            const errorData = await response.json(); // Try to read error message from backend
+            const errorData = await response.json();
             errores.value[juego.id] = errorData.message || 'Error al añadir el videojuego.';
         }
     } catch (e) {
         errores.value[juego.id] = 'Error de red o servidor.';
     } finally {
-        isAddingGame.value[juego.id] = false; // Always re-enable the button
+        isAddingGame.value[juego.id] = false;
     }
 };
 </script>

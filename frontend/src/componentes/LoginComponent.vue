@@ -21,7 +21,6 @@
                             required>
                     </div>
 
-                    <!-- Muestra el mensaje de error si la variable 'error' es verdadera -->
                     <div v-if="error != ''" class="mb-4">
                         <div class="alert alert-danger" role="alert">{{ error }}</div>
                     </div>

@@ -55,8 +55,6 @@ import ScrollBotonComponent from './scrollBotonComponent.vue';
 import PiePaginaComponent from './piePaginaComponent.vue';
 import PaypalComponent from './paypalComponent.vue';
 
-// todovideojuegosdev@personal.example.com
-
 const carrito = ref<any[]>([]);
 const cargando = ref(false);
 
@@ -105,15 +103,13 @@ const eliminarDelCarrito = async (videojuegoId: number) => {
             await fetchCarrito();
         }
     } catch (e) {
-        // Handle error
+
     }
 };
 
-// NEW: Function to handle payment success from PaypalComponent
 const handlePaymentSuccess = async () => {
-    // After a successful payment, clear the local cart and refresh from the backend
-    carrito.value = []; // Clear immediately for UI feedback
-    await fetchCarrito(); // Re-fetch to ensure sync with backend (which should now be empty)
+    carrito.value = [];
+    await fetchCarrito();
 };
 
 

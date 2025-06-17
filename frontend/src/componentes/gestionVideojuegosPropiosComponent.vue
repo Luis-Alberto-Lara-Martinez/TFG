@@ -188,7 +188,6 @@ const plataformaEdit = ref('');
 const errores = ref<{ [key: number]: string }>({});
 const juegoAEliminar = ref<any | null>(null);
 const modalEliminarRef = ref<any>(null);
-let modalEliminarInstance: any = null;
 const cargandoEdicion = ref(false);
 const cargandoEliminacion = ref(false);
 
@@ -278,7 +277,6 @@ function scrollArriba() {
 }
 
 onMounted(() => {
-    // Comprobación de rol administrador
     const token = localStorage.getItem('token');
     const rolToken = jwtDecode<any>(localStorage.getItem('token') || '').roles[0];
     if (rolToken != "administrador") {

@@ -94,8 +94,6 @@
 import { ref, computed, onMounted } from 'vue';
 import urlBackend from '@/rutaApi';
 import MenuComponent from './menuComponent.vue';
-import { jwtDecode } from 'jwt-decode';
-import { useRouter } from 'vue-router';
 import ScrollBotonComponent from './scrollBotonComponent.vue';
 import PiePaginaComponent from './piePaginaComponent.vue';
 
@@ -103,27 +101,24 @@ const videojuegos = ref<any[]>([]);
 const cargando = ref(false);
 const pagina = ref(1);
 const porPagina = 9;
-const router = useRouter();
 
-const totalPaginas = computed(() => Math.ceil(videojuegos.value.length / porPagina));
 const videojuegosPaginados = computed(() => {
     const start = (pagina.value - 1) * porPagina;
     return videojuegos.value.slice(start, start + porPagina);
 });
 
-const addingToCart = ref<{ [key: number]: boolean }>({}); // New: To track if a game is being added to cart
-const alertMessage = ref(''); // New: Message for the alert
-const showAlert = ref(false); // New: Visibility of the alert
-const alertType = ref(''); // New: Type of alert (success or danger)
+const addingToCart = ref<{ [key: number]: boolean }>({});
+const alertMessage = ref('');
+const showAlert = ref(false);
+const alertType = ref('');
 
 const insertarAlCarrito = async (id: number) => {
-    // Prevent multiple clicks for the same item
     if (addingToCart.value[id]) {
         return;
     }
 
-    addingToCart.value[id] = true; // Set to true to disable button and show spinner
-    showAlert.value = false; // Hide any previous alerts
+    addingToCart.value[id] = true;
+    showAlert.value = false;
 
     try {
         const token = localStorage.getItem('token');
@@ -138,7 +133,7 @@ const insertarAlCarrito = async (id: number) => {
         });
         const data = await response.json();
 
-        if (response.ok && !data.error) { // Check if response is successful (status 2xx) and no 'error' field
+        if (response.ok && !data.error) {
             alertMessage.value = data.message || 'Videojuego añadido al carrito exitosamente.';
             alertType.value = 'alert-success';
         } else {
@@ -147,7 +142,6 @@ const insertarAlCarrito = async (id: number) => {
         }
         showAlert.value = true;
 
-        // Automatically hide the alert after 3 seconds
         setTimeout(() => {
             showAlert.value = false;
         }, 3000);
@@ -160,7 +154,7 @@ const insertarAlCarrito = async (id: number) => {
             showAlert.value = false;
         }, 3000);
     } finally {
-        addingToCart.value[id] = false; // Re-enable the button
+        addingToCart.value[id] = false;
     }
 };
 
@@ -193,18 +187,8 @@ const nextImagen = (juegoId: number, total: number) => {
     indicesCarrusel.value[juegoId] = (idx + 1) % total;
 };
 
-const juegoAEliminar = ref<any | null>(null);
-const modalEliminarRef = ref<any>(null);
-let modalEliminarInstance: any = null;
-const cargandoEliminacion = ref(false);
-
-const busquedaTitulo = ref('');
-const ordenSeleccionado = ref('');
-const plataformaSeleccionada = ref('');
-const categoriaSeleccionada = ref('');
 const plataformas = ref<string[]>([]);
 const categorias = ref<string[]>([]);
-const resenasId = ref<number | null>(null);
 
 const obtenerPlataformas = async () => {
     try {
@@ -236,33 +220,6 @@ const obtenerCategorias = async () => {
     }
 };
 
-const aplicarFiltros = async () => {
-    // Se inicia la carga
-    cargando.value = true;
-    try {
-        const token = localStorage.getItem('token');
-        // ❗ CORRECCIÓN: Se apunta a la ruta correcta del controlador '/aplicarFiltros'
-        const response = await fetch(urlBackend + '/api/videojuegos/filtros', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                token,
-                titulo: busquedaTitulo.value.trim(),
-                orden: ordenSeleccionado.value,
-                categoria: categoriaSeleccionada.value,
-                plataforma: plataformaSeleccionada.value
-            })
-        });
-        const data = await response.json();
-        // ❗ CORRECCIÓN: El resultado se asigna a la variable 'videojuegos'
-        videojuegos.value = data || [];
-    } catch (e) {
-        videojuegos.value = [];
-    } finally {
-        cargando.value = false;
-    }
-};
-
 const formatPrice = (price: number): string => {
     if (typeof price !== 'number') {
         return '0,00';
@@ -272,10 +229,6 @@ const formatPrice = (price: number): string => {
         maximumFractionDigits: 2
     });
 };
-
-function scrollArriba() {
-    window.scrollTo({ top: 0, behavior: "instant" });
-}
 
 onMounted(() => {
     fetchVideojuegos();

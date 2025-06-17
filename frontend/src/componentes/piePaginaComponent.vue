@@ -2,7 +2,6 @@
     <footer class="text-white py-4 mt-5" style="background-color: #232a3a;">
         <div class="container">
             <div class="row text-center text-md-start">
-                <!-- Columna 1: CeX -->
                 <div class="col-12 col-md-4 mb-4 mb-md-0">
                     <h5 class="fw-bold">Todo Videojuegos</h5>
                     <ul class="list-unstyled mb-0">
@@ -13,7 +12,6 @@
                         <li><a href="#" class="text-light d-block">Prensa</a></li>
                     </ul>
                 </div>
-                <!-- Columna 2: Ayuda -->
                 <div class="col-12 col-md-4 mb-4 mb-md-0">
                     <h5 class="fw-bold">Ayuda</h5>
                     <ul class="list-unstyled mb-0">
@@ -21,7 +19,6 @@
                         <li><a href="#" class="text-light d-block">Preguntas frecuentes</a></li>
                     </ul>
                 </div>
-                <!-- Columna 3: Legal -->
                 <div class="col-12 col-md-4">
                     <h5 class="fw-bold">Legal</h5>
                     <ul class="list-unstyled mb-0">
